@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load ui_tags %}
+{# 请假审批 —— 对应 UC-05 与 SRS 6.4 活动图的审批流转 #}
+
+{% block title %}请假审批 · 人力资源管理系统{% endblock %}
+{% block page_title %}请假审批{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header">
+        <i class="bi bi-calendar-check"></i> 申请详情
+        <span class="badge text-bg-{{ leave.status|badge_class }} ms-2">{{ leave.get_status_display }}</span>
+      </div>
+      <div class="card-body">
+        <dl class="row detail-grid mb-0">
+          <dt class="col-sm-3">申请人</dt>
+          <dd class="col-sm-9">{{ leave.employee.real_name }}（{{ leave.employee.employee_no }}）</dd>
+
+          <dt class="col-sm-3">所属部门</dt>
+          <dd class="col-sm-9">{{ leave.employee.department.name|default:'—' }}</dd>
+
+          <dt class="col-sm-3">请假类型</dt>
+          <dd class="col-sm-9">{{ leave.get_leave_type_display }}</dd>
+
+          <dt class="col-sm-3">起止日期</dt>
+          <dd class="col-sm-9">
+            {{ leave.start_date|date:'Y-m-d' }} ~ {{ leave.end_date|date:'Y-m-d' }}
+            <span class="text-muted">（共 {{ leave.days }} 天）</span>
+          </dd>
+
+          <dt class="col-sm-3">请假事由</dt>
+          <dd class="col-sm-9">{{ leave.reason|linebreaksbr }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-check2-square"></i> 审批</div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label class="form-label">{{ form.action.label }}</label>
+            {% for radio in form.action %}
+              <div class="form-check">
+                {{ radio.tag }}
+                <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+              </div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-3">
+            <label for="{{ form.approve_opinion.id_for_label }}" class="form-label">
+              {{ form.approve_opinion.label }}
+            </label>
+            {{ form.approve_opinion }}
+          </div>
+
+          <div class="alert alert-warning small">
+            <i class="bi bi-exclamation-triangle"></i>
+            审批通过后，系统会为该员工<strong>请假区间内的每一天写入一条「请假」状态的考勤记录</strong>。
+            该动作与审批结果在同一事务内完成。
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> 提交审批</button>
+            <a href="{% url 'leave-list' %}" class="btn btn-outline-secondary">返回</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

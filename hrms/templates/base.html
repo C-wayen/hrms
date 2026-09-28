@@ -1,0 +1,123 @@
+{% load static menu_tags %}
+{# 全站基础布局：侧边栏 + 顶栏 + 内容区 —— 所有业务页面都继承本模板 #}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}人力资源管理系统{% endblock %}</title>
+
+  {# 静态资源全部本地化：答辩现场可能无外网，不能依赖 CDN #}
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap-icons/bootstrap-icons.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/hrms.css' %}">
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+<div class="layout">
+
+  {# ---------- 侧边栏：菜单树由 sidebar_menus 上下文处理器注入（FR-SYS-03） ---------- #}
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <i class="bi bi-people-fill"></i>
+      <span>人力资源管理系统</span>
+    </div>
+
+    <ul class="nav flex-column sidebar-nav">
+      {% for node in sidebar_menus %}
+        {% if node.children %}
+          <li class="nav-item">
+            <a class="nav-link sidebar-group" data-bs-toggle="collapse"
+               href="#menu-{{ node.menu.id }}" role="button"
+               aria-expanded="true" aria-controls="menu-{{ node.menu.id }}">
+              <i class="bi {{ node.menu.icon|default:'bi-circle' }}"></i>
+              <span>{{ node.menu.title }}</span>
+              <i class="bi bi-chevron-down ms-auto sidebar-caret"></i>
+            </a>
+            <div class="collapse show" id="menu-{{ node.menu.id }}">
+              <ul class="nav flex-column sidebar-subnav">
+                {% for child in node.children %}
+                  <li>
+                    {# menu_url 对未实现的路由兜底为 #，避免配置超前导致整页报错 #}
+                    <a class="nav-link" href="{% menu_url child.url_name %}">{{ child.title }}</a>
+                  </li>
+                {% endfor %}
+              </ul>
+            </div>
+          </li>
+        {% else %}
+          <li class="nav-item">
+            <a class="nav-link" href="{% menu_url node.menu.url_name %}">
+              <i class="bi {{ node.menu.icon|default:'bi-circle' }}"></i>
+              <span>{{ node.menu.title }}</span>
+            </a>
+          </li>
+        {% endif %}
+      {% empty %}
+        <li class="sidebar-empty">当前账号未分配任何菜单</li>
+      {% endfor %}
+    </ul>
+  </aside>
+
+  {# ---------- 主区域 ---------- #}
+  <div class="main">
+    <header class="topbar">
+      <button class="btn btn-sm btn-outline-secondary d-lg-none" id="sidebarToggle" type="button">
+        <i class="bi bi-list"></i>
+      </button>
+
+      <div class="topbar-title">{% block page_title %}{% endblock %}</div>
+
+      <div class="topbar-user dropdown">
+        <a class="dropdown-toggle" data-bs-toggle="dropdown" href="#" role="button">
+          <i class="bi bi-person-circle"></i>
+          <span>{{ user.real_name|default:user.username }}</span>
+          {% for g in user.groups.all %}
+            <span class="badge text-bg-light">{{ g.name }}</span>
+          {% endfor %}
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li>
+            <a class="dropdown-item" href="{% url 'admin:index' %}">
+              <i class="bi bi-gear"></i> 管理后台
+            </a>
+          </li>
+          <li><hr class="dropdown-divider"></li>
+          <li>
+            {# Django 5 起登出必须用 POST，否则被浏览器预取会导致意外退出 #}
+            <form method="post" action="{% url 'logout' %}">
+              {% csrf_token %}
+              <button type="submit" class="dropdown-item">
+                <i class="bi bi-box-arrow-right"></i> 退出登录
+              </button>
+            </form>
+          </li>
+        </ul>
+      </div>
+    </header>
+
+    <main class="content">
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="关闭"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+
+<script src="{% static 'vendor/bootstrap/bootstrap.bundle.min.js' %}"></script>
+<script>
+  // 窄屏下切换侧边栏显示（移动端适配）
+  document.getElementById('sidebarToggle')?.addEventListener('click', function () {
+    document.getElementById('sidebar')?.classList.toggle('show');
+  });
+</script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

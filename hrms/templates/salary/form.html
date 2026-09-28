@@ -1,0 +1,44 @@
+{% extends 'base.html' %}
+{# 薪酬模块通用表单页 —— 新增与编辑共用 #}
+{# 对应 FR-SAL-01 薪酬体系配置、FR-SAL-02 计件计时登记、FR-SAL-03 加班与水电登记 #}
+{# 抽成通用模板的原因：这 10 个页面的结构完全一致（字段列表 + 保存/取消）， #}
+{# 各写一份等于把同一处改动复制十遍 #}
+
+{% block title %}{{ page_title }} · 人力资源管理系统{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  {# 跨字段校验错误（例如「计件方式必须填写数量与单价」）只能在这里展示 #}
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger">
+      {% for error in form.non_field_errors %}
+        <div><i class="bi bi-exclamation-triangle"></i> {{ error }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="row g-3">
+        {% for field in form %}
+          {% include 'partials/form_field.html' with field=field %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {% if form_hint %}
+    <div class="alert alert-info">
+      <i class="bi bi-info-circle"></i> {{ form_hint }}
+    </div>
+  {% endif %}
+
+  <div class="d-flex gap-2 mb-4">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> 保存</button>
+    <a href="{% url cancel_url %}" class="btn btn-outline-secondary">取消</a>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% load ui_tags %}
+{# 培训计划列表 —— 对应 FR-TRN-01 制定内部培训计划 #}
+
+{% block title %}培训计划 · 人力资源管理系统{% endblock %}
+{% block page_title %}培训计划{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body pb-2">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label small mb-1">关键字</label>
+        <input type="text" name="q" value="{{ filters.q }}" class="form-control form-control-sm"
+               placeholder="计划名称 / 课程名称">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small mb-1">计划状态</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">全部状态</option>
+          {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-5 d-flex gap-2">
+        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search"></i> 查询</button>
+        <a href="{% url 'trainingplan-list' %}" class="btn btn-sm btn-outline-secondary">重置</a>
+        {% if perms.training.add_trainingplan %}
+          <a href="{% url 'trainingplan-create' %}" class="btn btn-sm btn-success ms-auto">
+            <i class="bi bi-plus-lg"></i> 制定计划
+          </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>计划名称</th><th>课程</th><th>起止日期</th><th>地点</th>
+          <th class="text-end">计划人数</th><th>状态</th><th>负责人</th>
+          <th class="text-end">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for plan in plans %}
+          <tr>
+            <td>{{ plan.name }}</td>
+            <td>{{ plan.course.name }}</td>
+            <td class="small">{{ plan.start_date|date:'Y-m-d' }} ~ {{ plan.end_date|date:'Y-m-d' }}</td>
+            <td>{{ plan.location|default:'—' }}</td>
+            <td class="text-end">{{ plan.planned_headcount }}</td>
+            <td><span class="badge text-bg-{{ plan.status|badge_class }}">{{ plan.get_status_display }}</span></td>
+            <td>{{ plan.organizer.real_name|default:'—' }}</td>
+            <td class="text-end text-nowrap">
+              {# 从计划直接跳到成绩登记，省去重新选计划 #}
+              {% if perms.training.add_trainingrecord %}
+                <a href="{% url 'trainingrecord-create' %}?plan={{ plan.pk }}"
+                   class="btn btn-sm btn-outline-success" title="登记成绩">
+                  <i class="bi bi-clipboard-check"></i>
+                </a>
+              {% endif %}
+              {% if perms.training.change_trainingplan %}
+                <a href="{% url 'trainingplan-update' plan.pk %}"
+                   class="btn btn-sm btn-outline-primary" title="编辑">
+                  <i class="bi bi-pencil"></i>
+                </a>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="8"><div class="empty-state"><i class="bi bi-inbox"></i><p>没有符合条件的培训计划</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include 'partials/pagination.html' %}
+{% endblock %}

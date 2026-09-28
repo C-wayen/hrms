@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+{# 提交请假申请 —— 对应 FR-PER-03 与 UC-05 #}
+
+{% block title %}提交请假申请 · 人力资源管理系统{% endblock %}
+{% block page_title %}提交请假申请{% endblock %}
+
+{% block content %}
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger">
+      {% for error in form.non_field_errors %}
+        <div><i class="bi bi-exclamation-triangle"></i> {{ error }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-calendar-plus"></i> 申请信息</div>
+    <div class="card-body">
+      <div class="row g-3">
+        {% for field in form %}
+          {% include 'partials/form_field.html' with field=field %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-info">
+    <i class="bi bi-info-circle"></i>
+    提交后进入「待审批」状态。审批通过时，系统会<strong>自动为您请假区间内的每一天写入考勤记录</strong>，
+    供薪酬核算时扣除未出勤天数。
+  </div>
+
+  <div class="d-flex gap-2 mb-4">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i> 提交申请</button>
+    <a href="{% url 'leave-list' %}" class="btn btn-outline-secondary">取消</a>
+  </div>
+</form>
+{% endblock %}

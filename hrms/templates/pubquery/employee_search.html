@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% load ui_tags %}
+{# 多维检索 —— 对应 FR-QRY-01 按部门、职位、工龄、学历等条件复合查询 #}
+
+{% block title %}多维检索 · 人力资源管理系统{% endblock %}
+{% block page_title %}多维检索{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-header"><i class="bi bi-funnel"></i> 检索条件</div>
+  <div class="card-body">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small mb-1">关键字</label>
+        <input type="text" name="q" value="{{ filters.q }}" class="form-control form-control-sm"
+               placeholder="工号 / 姓名 / 手机号">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label small mb-1">部门</label>
+        <select name="department" class="form-select form-select-sm">
+          <option value="">全部部门</option>
+          {% for dept in departments %}
+            <option value="{{ dept.id }}"
+                    {% if filters.department == dept.id|stringformat:'s' %}selected{% endif %}>
+              {{ dept.get_full_path }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label small mb-1">岗位</label>
+        <select name="position" class="form-select form-select-sm">
+          <option value="">全部岗位</option>
+          {% for pos in positions %}
+            <option value="{{ pos.id }}"
+                    {% if filters.position == pos.id|stringformat:'s' %}selected{% endif %}>
+              {{ pos.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label small mb-1">学历</label>
+        <select name="education" class="form-select form-select-sm">
+          <option value="">全部学历</option>
+          {% for value, label in education_choices %}
+            <option value="{{ value }}" {% if filters.education == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label small mb-1">在职状态</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">全部状态</option>
+          {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label small mb-1">性别</label>
+        <select name="gender" class="form-select form-select-sm">
+          <option value="">不限</option>
+          {% for value, label in gender_choices %}
+            <option value="{{ value }}" {% if filters.gender == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label small mb-1">工龄(年) ≥</label>
+        <input type="number" name="min_years" value="{{ filters.min_years }}"
+               class="form-control form-control-sm" min="0" placeholder="如 3">
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label small mb-1">工龄(年) ≤</label>
+        <input type="number" name="max_years" value="{{ filters.max_years }}"
+               class="form-control form-control-sm" min="0" placeholder="如 10">
+      </div>
+
+      <div class="col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search"></i> 查询</button>
+        <a href="{% url 'employee-search' %}" class="btn btn-sm btn-outline-secondary">重置</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% if searched %}
+  {# ---------- 结果统计：让 HR 一眼看出人员构成 ---------- #}
+  <div class="row g-3 mb-3">
+    <div class="col-md-4">
+      <div class="card stat-card h-100">
+        <div class="card-body">
+          <div class="stat-icon text-primary"><i class="bi bi-people"></i></div>
+          <div class="stat-value">{{ results|length }}</div>
+          <div class="stat-label">符合条件的员工</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="card-header py-2">学历构成</div>
+        <div class="card-body py-2">
+          {% for item in education_stats %}
+            <div class="d-flex justify-content-between small py-1">
+              <span>{{ item.label }}</span><strong>{{ item.total }}</strong>
+            </div>
+          {% empty %}
+            <div class="text-muted small">—</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card h-100">
+        <div class="card-header py-2">部门分布</div>
+        <div class="card-body py-2">
+          {% for item in department_stats %}
+            <div class="d-flex justify-content-between small py-1">
+              <span>{{ item.label }}</span><strong>{{ item.total }}</strong>
+            </div>
+          {% empty %}
+            <div class="text-muted small">—</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {# ---------- 明细结果 ---------- #}
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>工号</th><th>姓名</th><th>性别</th><th>部门</th><th>岗位</th>
+            <th>学历</th><th class="text-end">工龄</th><th>状态</th><th>入职日期</th>
+            <th class="text-end">详情</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for emp in results %}
+            <tr>
+              <td>{{ emp.employee_no }}</td>
+              <td>{{ emp.real_name }}</td>
+              <td>{{ emp.get_gender_display }}</td>
+              <td>{{ emp.department.name|default:'—' }}</td>
+              <td>{{ emp.position.name|default:'—' }}</td>
+              <td>{{ emp.get_education_display|default:'—' }}</td>
+              <td class="text-end">{{ emp.service_years|default_if_none:'—' }}</td>
+              <td><span class="badge text-bg-{{ emp.employ_status|badge_class }}">{{ emp.get_employ_status_display }}</span></td>
+              <td>{{ emp.hire_date|date:'Y-m-d'|default:'—' }}</td>
+              <td class="text-end">
+                <a href="{% url 'employee-detail' emp.pk %}" class="btn btn-sm btn-outline-secondary" title="查看档案">
+                  <i class="bi bi-eye"></i>
+                </a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="10">
+                <div class="empty-state"><i class="bi bi-search"></i><p>没有符合条件的员工，请放宽条件</p></div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% else %}
+  <div class="alert alert-secondary">
+    <i class="bi bi-info-circle"></i>
+    请设置检索条件后点击「查询」。支持部门、岗位、学历、在职状态、性别、工龄区间与关键字的任意组合。
+  </div>
+{% endif %}
+{% endblock %}

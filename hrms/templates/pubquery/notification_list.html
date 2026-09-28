@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% load ui_tags %}
+{# 人事变动通知单列表 —— 对应 FR-QRY-02 通知套红与打印 #}
+
+{% block title %}通知单打印 · 人力资源管理系统{% endblock %}
+{% block page_title %}人事变动通知单{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body pb-2">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label small mb-1">关键字</label>
+        <input type="text" name="q" value="{{ filters.q }}" class="form-control form-control-sm"
+               placeholder="编号 / 标题 / 员工姓名">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small mb-1">通知单类型</label>
+        <select name="doc_type" class="form-select form-select-sm">
+          <option value="">全部类型</option>
+          {% for value, label in type_choices %}
+            <option value="{{ value }}" {% if filters.doc_type == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-5 d-flex gap-2">
+        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search"></i> 查询</button>
+        <a href="{% url 'notification-list' %}" class="btn btn-sm btn-outline-secondary">重置</a>
+        {% if perms.pubquery.add_notificationdoc %}
+          <a href="{% url 'notification-create' %}" class="btn btn-sm btn-success ms-auto">
+            <i class="bi bi-plus-lg"></i> 生成通知单
+          </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>编号</th><th>类型</th><th>标题</th><th>涉及员工</th>
+          <th>签发日期</th><th>签发人</th><th class="text-end">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for doc in docs %}
+          <tr>
+            <td>{{ doc.doc_no }}</td>
+            <td>{{ doc.get_doc_type_display }}</td>
+            <td>{{ doc.title }}</td>
+            <td>{{ doc.employee.real_name }}
+              <div class="text-muted small">{{ doc.employee.department.name|default:'—' }}</div>
+            </td>
+            <td>{{ doc.issue_date|date:'Y-m-d' }}</td>
+            <td>{{ doc.issuer.real_name|default:'—' }}</td>
+            <td class="text-end text-nowrap">
+              {# 打印页在新窗口打开，便于对照着打印或另存为 PDF #}
+              <a href="{% url 'notification-print' doc.pk %}" target="_blank"
+                 class="btn btn-sm btn-outline-dark" title="打印 / 导出 PDF">
+                <i class="bi bi-printer"></i>
+              </a>
+              {% if perms.pubquery.change_notificationdoc %}
+                <a href="{% url 'notification-update' doc.pk %}"
+                   class="btn btn-sm btn-outline-primary" title="编辑">
+                  <i class="bi bi-pencil"></i>
+                </a>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7">
+              <div class="empty-state"><i class="bi bi-inbox"></i><p>没有符合条件的通知单</p></div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include 'partials/pagination.html' %}
+{% endblock %}

@@ -1,0 +1,98 @@
+{% extends 'base.html' %}
+{# 薪酬标准列表（含历史版本）—— 对应 FR-SAL-01 设定加班补贴标准、水电费扣除标准 #}
+{# 以及 FR-SYS-02 社保比例配置 #}
+
+{% block title %}薪酬标准 · 人力资源管理系统{% endblock %}
+{% block page_title %}薪酬标准{% endblock %}
+
+{% block content %}
+{% if current %}
+  <div class="alert alert-success">
+    <i class="bi bi-check-circle"></i>
+    <strong>当前执行标准（{{ current.effective_date }} 起生效）：</strong>
+    工作日加班 {{ current.overtime_workday_rate }} 倍 ·
+    休息日 {{ current.overtime_weekend_rate }} 倍 ·
+    法定节假日 {{ current.overtime_holiday_rate }} 倍 ·
+    月标准工时 {{ current.monthly_work_hours }} 小时 ·
+    水 {{ current.water_price }} 元/吨 · 电 {{ current.electricity_price }} 元/度 ·
+    社保个人负担 {{ current.social_insurance_ratio|floatformat:4 }}
+  </div>
+{% else %}
+  <div class="alert alert-danger">
+    <i class="bi bi-exclamation-triangle"></i>
+    尚未配置任何启用的薪酬标准，工资核算会直接失败。
+  </div>
+{% endif %}
+
+<div class="card mb-3">
+  <div class="card-body pb-2 d-flex gap-2">
+    <span class="text-muted small align-self-center">
+      标准按生效日期版本化：核算某月工资时取「生效日期不晚于该月」的最新一条。
+    </span>
+    {% if perms.salary.add_salarystandard %}
+      <a href="{% url 'salarystandard-create' %}" class="btn btn-sm btn-success ms-auto">
+        <i class="bi bi-plus-lg"></i> 新增标准
+      </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>生效日期</th>
+          <th class="text-end">工作日</th><th class="text-end">休息日</th><th class="text-end">节假日</th>
+          <th class="text-end">月标准工时</th>
+          <th class="text-end">水价</th><th class="text-end">电价</th>
+          <th class="text-end">社保比例</th>
+          <th>状态</th><th class="text-end">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for standard in standards %}
+          <tr>
+            <td>
+              {{ standard.effective_date }}
+              {% if current and standard.pk == current.pk %}
+                <span class="badge text-bg-primary">当前</span>
+              {% endif %}
+            </td>
+            <td class="text-end">{{ standard.overtime_workday_rate }}</td>
+            <td class="text-end">{{ standard.overtime_weekend_rate }}</td>
+            <td class="text-end">{{ standard.overtime_holiday_rate }}</td>
+            <td class="text-end">{{ standard.monthly_work_hours }}</td>
+            <td class="text-end">{{ standard.water_price }}</td>
+            <td class="text-end">{{ standard.electricity_price }}</td>
+            <td class="text-end">{{ standard.social_insurance_ratio|floatformat:4 }}</td>
+            <td>
+              {% if standard.is_active %}
+                <span class="badge text-bg-success">启用</span>
+              {% else %}
+                <span class="badge text-bg-secondary">停用</span>
+              {% endif %}
+            </td>
+            <td class="text-end text-nowrap">
+              {% if perms.salary.change_salarystandard %}
+                <a href="{% url 'salarystandard-update' standard.pk %}" class="btn btn-sm btn-outline-primary" title="编辑">
+                  <i class="bi bi-pencil"></i>
+                </a>
+              {% endif %}
+              {% if perms.salary.delete_salarystandard %}
+                <a href="{% url 'salarystandard-delete' standard.pk %}" class="btn btn-sm btn-outline-danger" title="删除">
+                  <i class="bi bi-trash"></i>
+                </a>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="10"><div class="empty-state"><i class="bi bi-inbox"></i><p>尚未配置薪酬标准</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include 'partials/pagination.html' %}
+{% endblock %}

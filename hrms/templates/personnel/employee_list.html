@@ -1,0 +1,171 @@
+{% extends 'base.html' %}
+{% load ui_tags %}
+{# 职工档案列表 —— 对应 FR-PER-01 职工档案管理、FR-QRY-01 多维检索、UC-01 #}
+
+{% block title %}职工档案 · 人力资源管理系统{% endblock %}
+{% block page_title %}职工档案{% endblock %}
+
+{% block content %}
+{# ---------- 筛选栏 ---------- #}
+<div class="card mb-3">
+  <div class="card-body pb-2">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label small mb-1">关键字</label>
+        <input type="text" name="q" value="{{ filters.q }}" class="form-control form-control-sm"
+               placeholder="工号 / 姓名 / 手机号">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label small mb-1">部门</label>
+        <select name="department" class="form-select form-select-sm">
+          <option value="">全部部门</option>
+          {% for dept in departments %}
+            <option value="{{ dept.id }}"
+                    {% if filters.department == dept.id|stringformat:'s' %}selected{% endif %}>
+              {{ dept.get_full_path }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-2">
+        <label class="form-label small mb-1">在职状态</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">全部状态</option>
+          {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-sm btn-primary">
+          <i class="bi bi-search"></i> 查询
+        </button>
+        <a href="{% url 'employee-list' %}" class="btn btn-sm btn-outline-secondary">重置</a>
+        {% if perms.personnel.add_employee %}
+          <a href="{% url 'employee-create' %}" class="btn btn-sm btn-success ms-auto">
+            <i class="bi bi-plus-lg"></i> 新增
+          </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ---------- 列表 ---------- #}
+<div class="card">
+  <div class="card-header d-flex justify-content-between">
+    <span><i class="bi bi-people"></i> 档案列表</span>
+    <span class="text-muted small">当前筛选结果 {{ total }} 条</span>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>工号</th>
+          <th>姓名</th>
+          <th>性别</th>
+          <th>部门</th>
+          <th>岗位</th>
+          <th>薪酬级别</th>
+          <th>在职状态</th>
+          <th>入职日期</th>
+          <th class="text-end">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for emp in employees %}
+          <tr>
+            <td><a href="{% url 'employee-detail' emp.pk %}">{{ emp.employee_no }}</a></td>
+            <td>{{ emp.real_name }}</td>
+            <td>{{ emp.get_gender_display }}</td>
+            <td>{{ emp.department.name|default:'—' }}</td>
+            <td>{{ emp.position.name|default:'—' }}</td>
+            <td>{{ emp.salary_level.name|default:'—' }}</td>
+            <td>
+              <span class="badge text-bg-{{ emp.employ_status|badge_class }}">
+                {{ emp.get_employ_status_display }}
+              </span>
+            </td>
+            <td>{{ emp.hire_date|date:'Y-m-d'|default:'—' }}</td>
+            <td class="text-end text-nowrap">
+              <a href="{% url 'employee-detail' emp.pk %}"
+                 class="btn btn-sm btn-outline-secondary" title="查看">
+                <i class="bi bi-eye"></i>
+              </a>
+              {% if perms.personnel.change_employee %}
+                <a href="{% url 'employee-update' emp.pk %}"
+                   class="btn btn-sm btn-outline-primary" title="编辑">
+                  <i class="bi bi-pencil"></i>
+                </a>
+              {% endif %}
+              {% if perms.personnel.delete_employee %}
+                <button type="button" class="btn btn-sm btn-outline-danger" title="删除"
+                        data-bs-toggle="modal" data-bs-target="#deleteModal"
+                        data-name="{{ emp.real_name }}"
+                        data-url="{% url 'employee-delete' emp.pk %}">
+                  <i class="bi bi-trash"></i>
+                </button>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="9">
+              <div class="empty-state">
+                <i class="bi bi-inbox"></i>
+                <p>没有符合条件的职工档案</p>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include 'partials/pagination.html' %}
+
+{# ---------- 删除确认框 ---------- #}
+{# 整页共用一个模态框，按钮上带着姓名与提交地址，避免每行渲染一个 #}
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">确认删除档案</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="关闭"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-2">确定要删除职工 <strong id="deleteName"></strong> 的档案吗？</p>
+        <p class="text-muted small mb-0">
+          档案将被标记为「已删除」并保留历史以便追溯，其登录账号同时停用。
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        {# 删除用 POST：既符合语义，也受 CSRF 保护，避免被 GET 链接误触发 #}
+        <form method="post" id="deleteForm">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">
+            <i class="bi bi-trash"></i> 确认删除
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // 打开确认框时，把被点按钮上的姓名与提交地址填进去
+  document.getElementById('deleteModal')?.addEventListener('show.bs.modal', function (event) {
+    const btn = event.relatedTarget;
+    document.getElementById('deleteName').textContent = btn.dataset.name;
+    document.getElementById('deleteForm').action = btn.dataset.url;
+  });
+</script>
+{% endblock %}

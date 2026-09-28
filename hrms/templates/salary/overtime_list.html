@@ -1,0 +1,88 @@
+{% extends 'base.html' %}
+{# 加班登记列表 —— 对应 FR-SAL-03 加班时长与事由登记 #}
+
+{% block title %}加班登记 · 人力资源管理系统{% endblock %}
+{% block page_title %}加班登记{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body pb-2">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small mb-1">员工</label>
+        <input type="text" name="q" value="{{ filters.q }}" class="form-control form-control-sm"
+               placeholder="姓名 / 工号">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1">薪酬周期</label>
+        <input type="month" name="salary_period" value="{{ filters.salary_period }}"
+               class="form-control form-control-sm">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1">加班类型</label>
+        <select name="overtime_type" class="form-select form-select-sm">
+          <option value="">全部</option>
+          {% for value, label in type_choices %}
+            <option value="{{ value }}" {% if filters.overtime_type == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-5 d-flex gap-2">
+        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search"></i> 查询</button>
+        <a href="{% url 'overtime-list' %}" class="btn btn-sm btn-outline-secondary">重置</a>
+        {% if perms.salary.add_overtimerecord %}
+          <a href="{% url 'overtime-create' %}" class="btn btn-sm btn-success ms-auto">
+            <i class="bi bi-plus-lg"></i> 加班登记
+          </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>员工</th><th>部门</th><th>加班日期</th><th>类型</th>
+          <th class="text-end">时长(小时)</th><th>薪酬周期</th><th>事由</th><th class="text-end">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for record in records %}
+          <tr>
+            <td>{{ record.employee.real_name }}<span class="text-muted small">（{{ record.employee.employee_no }}）</span></td>
+            <td>{{ record.employee.department.name|default:'—' }}</td>
+            <td>{{ record.overtime_date }}</td>
+            <td><span class="badge text-bg-light">{{ record.get_overtime_type_display }}</span></td>
+            <td class="text-end">{{ record.hours }}</td>
+            <td>{{ record.salary_period }}</td>
+            <td class="text-muted small">{{ record.reason|default:'—' }}</td>
+            <td class="text-end text-nowrap">
+              {% if perms.salary.change_overtimerecord %}
+                <a href="{% url 'overtime-update' record.pk %}" class="btn btn-sm btn-outline-primary" title="编辑">
+                  <i class="bi bi-pencil"></i>
+                </a>
+              {% endif %}
+              {% if perms.salary.delete_overtimerecord %}
+                <form method="post" action="{% url 'overtime-delete' record.pk %}" class="d-inline"
+                      onsubmit="return confirm('确认删除这条加班记录吗？');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-danger" title="删除">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="8"><div class="empty-state"><i class="bi bi-inbox"></i><p>没有符合条件的加班记录</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include 'partials/pagination.html' %}
+{% endblock %}

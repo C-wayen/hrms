@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{# 通知单表单 —— 新增与编辑共用（FR-QRY-02） #}
+
+{% block title %}{{ page_title }} · 人力资源管理系统{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger">
+      {% for error in form.non_field_errors %}<div><i class="bi bi-exclamation-triangle"></i> {{ error }}</div>{% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-file-earmark-text"></i> 通知单内容</div>
+    <div class="card-body">
+      <div class="row g-3">
+        {% for field in form %}
+          {% include 'partials/form_field.html' with field=field %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-info">
+    <i class="bi bi-info-circle"></i>
+    保存后可在列表中点击「打印」按钮打开套红版式页面，
+    用浏览器打印功能直接打印，或<strong>打印到 PDF</strong> 另存。
+  </div>
+
+  <div class="d-flex gap-2 mb-4">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> 保存</button>
+    <a href="{% url 'notification-list' %}" class="btn btn-outline-secondary">取消</a>
+  </div>
+</form>
+{% endblock %}

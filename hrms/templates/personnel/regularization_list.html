@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% load ui_tags %}
+{# 转正申请列表 —— 对应 FR-PER-02 实习生转正申请 #}
+
+{% block title %}转正申请 · 人力资源管理系统{% endblock %}
+{% block page_title %}转正申请{% endblock %}
+
+{% block content %}
+{# ---------- 筛选与操作栏 ---------- #}
+<div class="card mb-3">
+  <div class="card-body pb-2">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small mb-1">审批状态</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">全部状态</option>
+          {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-9 d-flex gap-2 align-items-center">
+        <button type="submit" class="btn btn-sm btn-primary">
+          <i class="bi bi-search"></i> 查询
+        </button>
+        <a href="{% url 'regularization-list' %}" class="btn btn-sm btn-outline-secondary">重置</a>
+
+        {% if perms.personnel.add_regularizationapply %}
+          <a href="{% url 'regularization-create' %}" class="btn btn-sm btn-success">
+            <i class="bi bi-plus-lg"></i> 发起转正申请
+          </a>
+        {% endif %}
+
+        {% if pending_count %}
+          <span class="badge text-bg-warning ms-auto">
+            <i class="bi bi-hourglass-split"></i> 待审批 {{ pending_count }}
+          </span>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+{# ---------- 列表 ---------- #}
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>申请人</th>
+          <th>部门</th>
+          <th>原状态</th>
+          <th>申请日期</th>
+          <th>期望转正日期</th>
+          <th>审批状态</th>
+          <th>审批人</th>
+          <th class="text-end">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for apply in applies %}
+          <tr>
+            <td>{{ apply.employee.real_name }}<div class="text-muted small">{{ apply.employee.employee_no }}</div></td>
+            <td>{{ apply.employee.department.name|default:'—' }}</td>
+            <td>{{ apply.get_original_status_display }}</td>
+            <td>{{ apply.apply_date|date:'Y-m-d' }}</td>
+            <td>{{ apply.expect_regular_date|date:'Y-m-d' }}</td>
+            <td>
+              <span class="badge text-bg-{{ apply.status|badge_class }}">
+                {{ apply.get_status_display }}
+              </span>
+            </td>
+            <td>{{ apply.approver.real_name|default:'—' }}</td>
+            <td class="text-end text-nowrap">
+              {% if apply.status == 'pending' and perms.personnel.change_regularizationapply %}
+                <a href="{% url 'regularization-approve' apply.pk %}" class="btn btn-sm btn-primary">
+                  <i class="bi bi-check2-square"></i> 审批
+                </a>
+              {% else %}
+                <span class="text-muted small">—</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="8">
+              <div class="empty-state">
+                <i class="bi bi-inbox"></i>
+                <p>没有符合条件的转正申请</p>
+              </div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include 'partials/pagination.html' %}
+{% endblock %}

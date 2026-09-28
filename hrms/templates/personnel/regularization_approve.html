@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% load ui_tags %}
+{# 转正审批 —— 对应 FR-PER-02 与索引 6.4 活动图的审批流转 #}
+
+{% block title %}转正审批 · 人力资源管理系统{% endblock %}
+{% block page_title %}转正审批{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  {# ---------- 申请详情（只读） ---------- #}
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header">
+        <i class="bi bi-file-earmark-person"></i>
+        申请详情
+        <span class="badge text-bg-{{ apply.status|badge_class }} ms-2">
+          {{ apply.get_status_display }}
+        </span>
+      </div>
+      <div class="card-body">
+        <dl class="row detail-grid mb-0">
+          <dt class="col-sm-3">申请人</dt>
+          <dd class="col-sm-9">
+            {{ apply.employee.real_name }}（{{ apply.employee.employee_no }}）
+          </dd>
+
+          <dt class="col-sm-3">所属部门</dt>
+          <dd class="col-sm-9">{{ apply.employee.department.name|default:'—' }}</dd>
+
+          <dt class="col-sm-3">申请时状态</dt>
+          <dd class="col-sm-9">{{ apply.get_original_status_display }}</dd>
+
+          <dt class="col-sm-3">入职日期</dt>
+          <dd class="col-sm-9">{{ apply.employee.hire_date|date:'Y-m-d'|default:'—' }}</dd>
+
+          <dt class="col-sm-3">申请日期</dt>
+          <dd class="col-sm-9">{{ apply.apply_date|date:'Y-m-d' }}</dd>
+
+          <dt class="col-sm-3">期望转正日期</dt>
+          <dd class="col-sm-9">{{ apply.expect_regular_date|date:'Y-m-d' }}</dd>
+
+          <dt class="col-sm-3">自我评价</dt>
+          <dd class="col-sm-9">{{ apply.self_evaluation|default:'—'|linebreaksbr }}</dd>
+
+          <dt class="col-sm-3">部门意见</dt>
+          <dd class="col-sm-9">{{ apply.department_opinion|default:'—'|linebreaksbr }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+
+  {# ---------- 审批表单 ---------- #}
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-check2-square"></i> 审批</div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+
+          <div class="mb-3">
+            <label class="form-label">{{ form.action.label }}</label>
+            {% for radio in form.action %}
+              <div class="form-check">
+                {{ radio.tag }}
+                <label class="form-check-label" for="{{ radio.id_for_label }}">{{ radio.choice_label }}</label>
+              </div>
+            {% endfor %}
+          </div>
+
+          <div class="mb-3">
+            <label for="{{ form.hr_opinion.id_for_label }}" class="form-label">
+              {{ form.hr_opinion.label }}
+            </label>
+            {{ form.hr_opinion }}
+          </div>
+
+          <div class="alert alert-warning small">
+            <i class="bi bi-exclamation-triangle"></i>
+            选择「通过转正」后，员工档案的<strong>在职状态将变为「正式」</strong>，
+            并写入转正日期。该操作与审批结果在同一事务内完成。
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-check-lg"></i> 提交审批
+            </button>
+            <a href="{% url 'regularization-list' %}" class="btn btn-outline-secondary">返回</a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

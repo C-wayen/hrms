@@ -1,0 +1,20 @@
+{# 单个表单字段的统一渲染：标签 / 必填标记 / 控件 / 帮助文本 / 错误提示 #}
+{# 抽成片段的原因：档案表单有 20 个字段，每个都手写这五段会重复且容易漏 #}
+<div class="col-md-6">
+  <label for="{{ field.id_for_label }}" class="form-label">
+    {{ field.label }}
+    {% if field.field.required %}<span class="text-danger">*</span>{% endif %}
+  </label>
+
+  {{ field }}
+
+  {% if field.help_text %}
+    <div class="form-text">{{ field.help_text }}</div>
+  {% endif %}
+
+  {% for error in field.errors %}
+    <div class="text-danger small mt-1">
+      <i class="bi bi-exclamation-circle"></i> {{ error }}
+    </div>
+  {% endfor %}
+</div>

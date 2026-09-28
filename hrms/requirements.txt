@@ -1,0 +1,14 @@
+# HRMS 项目依赖清单（Python 3.12 / conda 环境 aip）
+#
+# 安装命令：
+#   & 'D:\rj\conda_env\envs\aip\python.exe' -m pip install -r requirements.txt
+
+# Web 框架。选 5.2 LTS 而非 6.x：Django 6 要求 MySQL 8.4+，本机为 MySQL 8.0.19
+Django==5.2.17
+
+# MySQL 驱动。纯 Python 实现，免 C 编译器（Windows 友好）；
+# 在 config/settings.py 中通过 pymysql.install_as_MySQLdb() 伪装成 mysqlclient 供 Django 使用
+PyMySQL==1.2.3
+
+# 读取 .env 文件，避免把数据库密码写进代码或提交到版本库
+python-dotenv==1.2.3

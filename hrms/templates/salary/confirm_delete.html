@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{# 通用删除确认页 —— 薪酬级别与薪酬标准共用（FR-SAL-01） #}
+
+{% block title %}{{ page_title }} · 人力资源管理系统{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 640px;">
+  <div class="card-body">
+    <p class="mb-3">
+      确定要删除 <strong>{{ object_label }}</strong> 吗？此操作不可撤销。
+    </p>
+
+    {# 删除的影响面各不相同（可能被员工引用、可能让核算失败），由视图传入说明 #}
+    {% if warning %}
+      <div class="alert alert-warning mb-3">
+        <i class="bi bi-exclamation-triangle"></i> {{ warning }}
+      </div>
+    {% endif %}
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-danger"><i class="bi bi-trash"></i> 确认删除</button>
+        <a href="{% url cancel_url %}" class="btn btn-outline-secondary">取消</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

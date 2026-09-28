@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% load ui_tags %}
+{# 工资档案列表 / 批量发放 —— 对应 FR-SAL-02 生成工资档案、批量发放、历史薪酬查询 #}
+
+{% block title %}工资核算与发放 · 人力资源管理系统{% endblock %}
+{% block page_title %}工资核算与发放{% endblock %}
+
+{% block content %}
+{# 整周期发放必须放在表格之外单独用一个表单：HTML 不允许 form 嵌套， #}
+{# 若塞进表格表单里，「全部发放」会把用户勾选的几条一起提交 #}
+{% if summary.can_pay and filters.salary_period %}
+  <form method="post" action="{% url 'salary-pay' %}" class="mb-3"
+        onsubmit="return confirm('确认发放 {{ filters.salary_period }} 全部待发放的工资吗？发放后金额将被锁定。');">
+    {% csrf_token %}
+    <input type="hidden" name="salary_period" value="{{ filters.salary_period }}">
+    <button type="submit" class="btn btn-success">
+      <i class="bi bi-cash-coin"></i> 发放 {{ filters.salary_period }} 全部待发放
+    </button>
+  </form>
+{% endif %}
+
+<div class="card mb-3">
+  <div class="card-body pb-2">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-2">
+        <label class="form-label small mb-1">薪酬周期</label>
+        <input type="month" name="salary_period" value="{{ filters.salary_period }}"
+               class="form-control form-control-sm">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1">发放状态</label>
+        <select name="pay_status" class="form-select form-select-sm">
+          <option value="">全部</option>
+          {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if filters.pay_status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      {% if summary.can_pay %}
+        <div class="col-md-2">
+          <label class="form-label small mb-1">部门</label>
+          <select name="department" class="form-select form-select-sm">
+            <option value="">全部部门</option>
+            {% for dept in departments %}
+              <option value="{{ dept.pk }}" {% if filters.department == dept.pk|stringformat:'s' %}selected{% endif %}>
+                {{ dept.name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+      {% endif %}
+      <div class="col-md-2">
+        <label class="form-label small mb-1">员工</label>
+        <input type="text" name="q" value="{{ filters.q }}" class="form-control form-control-sm"
+               placeholder="姓名 / 工号">
+      </div>
+      <div class="col-md-4 d-flex gap-2">
+        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search"></i> 查询</button>
+        <a href="{% url 'salaryrecord-list' %}" class="btn btn-sm btn-outline-secondary">重置</a>
+        {% if summary.can_pay %}
+          <a href="{% url 'salary-calculate' %}" class="btn btn-sm btn-warning ms-auto">
+            <i class="bi bi-calculator"></i> 工资核算
+          </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="d-flex align-items-center mb-2">
+  <div class="text-muted small">
+    共 <strong>{{ summary.total_people }}</strong> 人，
+    实发合计 <strong>{{ summary.total_net|floatformat:2 }}</strong> 元
+  </div>
+</div>
+
+<form method="post" action="{% url 'salary-pay' %}">
+  {% csrf_token %}
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            {% if summary.can_pay %}<th style="width:36px;"></th>{% endif %}
+            <th>员工</th><th>部门</th><th>周期</th>
+            <th class="text-end">基本工资</th><th class="text-end">计件/计时</th>
+            <th class="text-end">加班费</th><th class="text-end">奖罚净额</th>
+            <th class="text-end">水电扣费</th><th class="text-end">社保自负</th>
+            <th class="text-end">实发工资</th><th>状态</th><th class="text-end">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for record in records %}
+            <tr>
+              {% if summary.can_pay %}
+                <td>
+                  {% if record.pay_status == 'draft' %}
+                    <input type="checkbox" class="form-check-input" name="record_ids"
+                           value="{{ record.pk }}" aria-label="选择本行">
+                  {% endif %}
+                </td>
+              {% endif %}
+              <td>
+                {{ record.employee.real_name }}
+                <span class="text-muted small">（{{ record.employee.employee_no }}）</span>
+              </td>
+              <td>{{ record.employee.department.name|default:'—' }}</td>
+              <td>{{ record.salary_period }}</td>
+              <td class="text-end">{{ record.base_salary|floatformat:2 }}</td>
+              <td class="text-end">{{ record.piecework_amount|floatformat:2 }}</td>
+              <td class="text-end">{{ record.overtime_amount|floatformat:2 }}</td>
+              {# 奖罚净额可能为负，负数用红色提示，否则容易被忽略 #}
+              <td class="text-end {% if record.reward_punish_amount < 0 %}text-danger{% endif %}">
+                {{ record.reward_punish_amount|floatformat:2 }}
+              </td>
+              <td class="text-end">{{ record.utility_deduction|floatformat:2 }}</td>
+              <td class="text-end">{{ record.social_deduction|floatformat:2 }}</td>
+              <td class="text-end fw-bold">{{ record.net_pay|floatformat:2 }}</td>
+              <td>
+                {% if record.pay_status == 'paid' %}
+                  <span class="badge text-bg-success">已发放</span>
+                {% else %}
+                  <span class="badge text-bg-secondary">待发放</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                <a href="{% url 'salaryrecord-detail' record.pk %}"
+                   class="btn btn-sm btn-outline-primary" title="查看工资条">
+                  <i class="bi bi-receipt"></i>
+                </a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="13">
+                <div class="empty-state">
+                  <i class="bi bi-inbox"></i>
+                  <p>没有工资档案，请先到「工资核算」页生成本周期数据</p>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if summary.can_pay and records %}
+    <input type="hidden" name="salary_period" value="{{ filters.salary_period }}">
+    <div class="mt-3 mb-4">
+      <button type="submit" class="btn btn-success"
+              onclick="return confirm('确认发放所选的工资记录吗？发放后金额将被锁定。');">
+        <i class="bi bi-check2-square"></i> 发放选中
+      </button>
+      <span class="text-muted small ms-2">未勾选任何行时，发放本周期全部待发放记录。</span>
+    </div>
+  {% endif %}
+</form>
+
+{% include 'partials/pagination.html' %}
+{% endblock %}

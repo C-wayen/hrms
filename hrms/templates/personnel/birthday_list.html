@@ -1,0 +1,138 @@
+{% extends 'base.html' %}
+{# 员工关怀 —— 生日提醒与统计（FR-PER-04） #}
+
+{% block title %}员工关怀 · 人力资源管理系统{% endblock %}
+{% block page_title %}员工关怀{% endblock %}
+
+{% block content %}
+{# ---------- 概览卡片 ---------- #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card h-100">
+      <div class="card-body">
+        <div class="stat-icon text-danger"><i class="bi bi-cake2"></i></div>
+        <div class="stat-value">{{ today_people|length }}</div>
+        <div class="stat-label">今日生日</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card h-100">
+      <div class="card-body">
+        <div class="stat-icon text-warning"><i class="bi bi-calendar-week"></i></div>
+        <div class="stat-value">{{ week_people|length }}</div>
+        <div class="stat-label">未来 7 天生日</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card h-100">
+      <div class="card-body">
+        <div class="stat-icon text-info"><i class="bi bi-calendar-month"></i></div>
+        <div class="stat-value">{{ month_people|length }}</div>
+        <div class="stat-label">本月生日</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card h-100">
+      <div class="card-body">
+        <div class="stat-icon text-primary"><i class="bi bi-bar-chart"></i></div>
+        <div class="stat-value">{{ today|date:'n' }} 月</div>
+        <div class="stat-label">当前月份</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  {# ---------- 未来 7 天生日名单 ---------- #}
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">
+        <i class="bi bi-gift"></i> 未来 7 天生日
+        <span class="text-muted small ms-2">
+          （{{ today|date:'n 月 j 日' }} ~ {{ week_end|date:'n 月 j 日' }}）
+        </span>
+      </div>
+      <div class="card-body p-0">
+        {% if week_people %}
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr><th>姓名</th><th>部门</th><th>生日</th><th class="text-end">年龄</th></tr>
+            </thead>
+            <tbody>
+              {% for emp in week_people %}
+                <tr>
+                  <td>
+                    {{ emp.real_name }}
+                    <div class="text-muted small">{{ emp.employee_no }}</div>
+                  </td>
+                  <td>{{ emp.department.name|default:'—' }}</td>
+                  <td>{{ emp.birth_date|date:'n 月 j 日' }}</td>
+                  <td class="text-end">{{ emp.age }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="empty-state"><i class="bi bi-emoji-smile"></i><p>未来 7 天没有员工过生日</p></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ---------- 全年生日分布 ---------- #}
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header">
+        <i class="bi bi-bar-chart-line"></i> 全年生日分布
+        <span class="text-muted small ms-2">（用于提前安排当月关怀活动）</span>
+      </div>
+      <div class="card-body">
+        {% for item in month_distribution %}
+          <div class="d-flex align-items-center mb-2">
+            <div class="month-label {% if item.month == today.month %}fw-bold text-primary{% endif %}">
+              {{ item.label }}
+            </div>
+            <div class="progress flex-grow-1 mx-2" style="height: 16px;">
+              <div class="progress-bar {% if item.month == today.month %}bg-primary{% else %}bg-info{% endif %}"
+                   role="progressbar" style="width: {{ item.percent }}%"
+                   aria-valuenow="{{ item.total }}" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <div class="month-count {% if item.month == today.month %}fw-bold text-primary{% endif %}">
+              {{ item.total }}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {# ---------- 本月生日名单 ---------- #}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <i class="bi bi-calendar-heart"></i> 本月生日名单
+        <span class="badge text-bg-secondary ms-2">{{ month_people|length }} 人</span>
+      </div>
+      <div class="card-body">
+        {% if month_people %}
+          <div class="d-flex flex-wrap gap-2">
+            {% for emp in month_people %}
+              <div class="birthday-chip {% if emp.birth_date|date:'j' == today|date:'j' %}birthday-today{% endif %}">
+                <i class="bi bi-cake2"></i>
+                <strong>{{ emp.real_name }}</strong>
+                <span class="text-muted">{{ emp.birth_date|date:'n 月 j 日' }}</span>
+                <span class="badge text-bg-light">{{ emp.department.name|default:'—' }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state"><i class="bi bi-emoji-smile"></i><p>本月没有员工过生日</p></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

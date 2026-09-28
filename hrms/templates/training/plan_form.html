@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{# 培训计划表单 —— 新增与编辑共用（FR-TRN-01） #}
+
+{% block title %}{{ page_title }} · 人力资源管理系统{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger">
+      {% for error in form.non_field_errors %}<div><i class="bi bi-exclamation-triangle"></i> {{ error }}</div>{% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-calendar-range"></i> 计划信息</div>
+    <div class="card-body">
+      <div class="row g-3">
+        {% for field in form %}
+          {% include 'partials/form_field.html' with field=field %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-info">
+    <i class="bi bi-info-circle"></i>
+    「面向部门」留空表示面向全体员工；可多选（按住 Ctrl / Cmd）。
+  </div>
+
+  <div class="d-flex gap-2 mb-4">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> 保存</button>
+    <a href="{% url 'trainingplan-list' %}" class="btn btn-outline-secondary">取消</a>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+{% load ui_tags %}
+{# 我的工资 —— FR-SAL-02 历史薪酬查询的职工自助入口 #}
+{# 复用工资档案列表视图：普通职工只看到自己，HR 也能从这里快速查看本人工资 #}
+
+{% block title %}我的工资 · 人力资源管理系统{% endblock %}
+{% block page_title %}我的工资{% endblock %}
+
+{% block content %}
+<div class="d-flex mb-3">
+  <div class="text-muted small">
+    累计已发放到手：<strong>{{ paid_total|floatformat:2 }}</strong> 元
+  </div>
+</div>
+
+{% if records %}
+  <div class="row g-3">
+    {% for record in records %}
+      <div class="col-md-6 col-xl-4">
+        <div class="card h-100">
+          <div class="card-header d-flex align-items-center">
+            <span><i class="bi bi-calendar3"></i> {{ record.salary_period }}</span>
+            <span class="ms-auto">
+              {% if record.pay_status == 'paid' %}
+                <span class="badge text-bg-success">已发放</span>
+              {% else %}
+                <span class="badge text-bg-secondary">待发放</span>
+              {% endif %}
+            </span>
+          </div>
+          <div class="card-body">
+            <div class="mb-2">
+              <span class="text-muted small">实发工资</span>
+              <div class="fs-3 fw-bold text-primary">{{ record.net_pay|floatformat:2 }} <span class="fs-6">元</span></div>
+            </div>
+            <table class="table table-sm mb-0 small">
+              <tbody>
+                <tr><td class="text-muted">基本工资</td><td class="text-end">{{ record.base_salary|floatformat:2 }}</td></tr>
+                <tr><td class="text-muted">计件/计时</td><td class="text-end">{{ record.piecework_amount|floatformat:2 }}</td></tr>
+                <tr><td class="text-muted">加班费</td><td class="text-end">{{ record.overtime_amount|floatformat:2 }}</td></tr>
+                <tr>
+                  <td class="text-muted">奖罚净额</td>
+                  <td class="text-end {% if record.reward_punish_amount < 0 %}text-danger{% endif %}">
+                    {{ record.reward_punish_amount|floatformat:2 }}
+                  </td>
+                </tr>
+                <tr><td class="text-muted">水电扣费</td><td class="text-end">-{{ record.utility_deduction|floatformat:2 }}</td></tr>
+                <tr><td class="text-muted">社保自负</td><td class="text-end">-{{ record.social_deduction|floatformat:2 }}</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="card-footer text-end bg-white">
+            <a href="{% url 'salaryrecord-detail' record.pk %}" class="btn btn-sm btn-outline-primary">
+              <i class="bi bi-receipt"></i> 查看工资条
+            </a>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card">
+    <div class="card-body">
+      <div class="empty-state">
+        <i class="bi bi-inbox"></i>
+        <p>暂无工资记录。工资由 HR 在核算后生成，请稍后再来查看。</p>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+{% include 'partials/pagination.html' %}
+{% endblock %}

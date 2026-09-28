@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{# 水电费扣费登记列表 —— 对应 FR-SAL-03 水电费抄表与扣费登记 #}
+
+{% block title %}水电费登记 · 人力资源管理系统{% endblock %}
+{% block page_title %}水电费登记{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body pb-2">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label small mb-1">员工</label>
+        <input type="text" name="q" value="{{ filters.q }}" class="form-control form-control-sm"
+               placeholder="姓名 / 工号">
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small mb-1">薪酬周期</label>
+        <input type="month" name="salary_period" value="{{ filters.salary_period }}"
+               class="form-control form-control-sm">
+      </div>
+      <div class="col-md-5 d-flex gap-2">
+        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search"></i> 查询</button>
+        <a href="{% url 'utilityfee-list' %}" class="btn btn-sm btn-outline-secondary">重置</a>
+        {% if perms.salary.add_utilityfeerecord %}
+          <a href="{% url 'utilityfee-create' %}" class="btn btn-sm btn-success ms-auto">
+            <i class="bi bi-plus-lg"></i> 水电费登记
+          </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>员工</th><th>部门</th><th>薪酬周期</th>
+          <th class="text-end">用水(吨)</th><th class="text-end">水费(元)</th>
+          <th class="text-end">用电(度)</th><th class="text-end">电费(元)</th>
+          <th class="text-end">合计扣费</th><th class="text-end">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for record in records %}
+          <tr>
+            <td>{{ record.employee.real_name }}<span class="text-muted small">（{{ record.employee.employee_no }}）</span></td>
+            <td>{{ record.employee.department.name|default:'—' }}</td>
+            <td>{{ record.salary_period }}</td>
+            <td class="text-end">{{ record.water_usage }}</td>
+            <td class="text-end">{{ record.water_fee|floatformat:2 }}</td>
+            <td class="text-end">{{ record.electricity_usage }}</td>
+            <td class="text-end">{{ record.electricity_fee|floatformat:2 }}</td>
+            <td class="text-end fw-semibold">{{ record.total_fee|floatformat:2 }}</td>
+            <td class="text-end text-nowrap">
+              {% if perms.salary.change_utilityfeerecord %}
+                <a href="{% url 'utilityfee-update' record.pk %}" class="btn btn-sm btn-outline-primary" title="编辑">
+                  <i class="bi bi-pencil"></i>
+                </a>
+              {% endif %}
+              {% if perms.salary.delete_utilityfeerecord %}
+                <form method="post" action="{% url 'utilityfee-delete' record.pk %}" class="d-inline"
+                      onsubmit="return confirm('确认删除这条水电费记录吗？');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-danger" title="删除">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="9"><div class="empty-state"><i class="bi bi-inbox"></i><p>没有符合条件的水电费记录</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include 'partials/pagination.html' %}
+{% endblock %}

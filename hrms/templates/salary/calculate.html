@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{# 工资核算页 —— 对应 FR-SAL-02 生成工资档案（SRS 4.3 工资核算公式） #}
+
+{% block title %}工资核算 · 人力资源管理系统{% endblock %}
+{% block page_title %}工资核算{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-calculator"></i> 核算参数</div>
+      <div class="card-body">
+        <form method="post" novalidate>
+          {% csrf_token %}
+          <div class="row g-3">
+            {% for field in form %}
+              {% include 'partials/form_field.html' with field=field %}
+            {% endfor %}
+          </div>
+
+          <div class="alert alert-info mt-3 mb-3">
+            <i class="bi bi-info-circle"></i>
+            同一周期重复核算不会重复生成记录，只会覆盖<strong>待发放</strong>的那部分；
+            已发放的工资不会被改动。
+          </div>
+
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-play-fill"></i> 开始核算
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-list-check"></i> 本次范围</div>
+      <div class="card-body">
+        <p class="mb-2">
+          周期：<strong>{{ period }}</strong><br>
+          待核算员工：<strong>{{ preview_count }}</strong> 人（不含离职、未定级员工）<br>
+          该周期已有记录：<strong>{{ existing_count }}</strong> 条
+        </p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><i class="bi bi-sliders"></i> 适用标准</div>
+      <div class="card-body">
+        {% if standard %}
+          <p class="mb-2 text-muted small">{{ standard.effective_date }} 起生效</p>
+          <table class="table table-sm mb-0">
+            <tbody>
+              <tr><th>工作日加班倍率</th><td class="text-end">{{ standard.overtime_workday_rate }}</td></tr>
+              <tr><th>休息日加班倍率</th><td class="text-end">{{ standard.overtime_weekend_rate }}</td></tr>
+              <tr><th>法定节假日倍率</th><td class="text-end">{{ standard.overtime_holiday_rate }}</td></tr>
+              <tr><th>月标准工时</th><td class="text-end">{{ standard.monthly_work_hours }} 小时</td></tr>
+              <tr><th>水费单价</th><td class="text-end">{{ standard.water_price }} 元/吨</td></tr>
+              <tr><th>电费单价</th><td class="text-end">{{ standard.electricity_price }} 元/度</td></tr>
+              <tr><th>社保个人负担</th><td class="text-end">{{ standard.social_insurance_ratio|floatformat:4 }}</td></tr>
+            </tbody>
+          </table>
+        {% else %}
+          <div class="alert alert-danger mb-0">
+            <i class="bi bi-exclamation-triangle"></i>
+            该周期没有适用的薪酬标准，无法核算。请先到「薪酬标准」新增一条生效日期不晚于
+            {{ period }} 的记录。
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+{# 把公式摆在核算页上，是为了让核算结果可被逐项核对，而不是只能看最终数字 #}
+<div class="card mt-3">
+  <div class="card-header"><i class="bi bi-braces"></i> 核算公式（SRS 4.3）</div>
+  <div class="card-body">
+    <p class="mb-2 fs-6">
+      实发工资 = 基本工资 ＋ 计件/计时工资 ＋ 加班费 ＋ 奖罚净额 － 水电扣费 － 社保自负部分
+    </p>
+    <ul class="mb-0 small text-muted">
+      <li>基本工资：取员工所属<strong>薪酬级别</strong>的基本工资。</li>
+      <li>计件/计时工资：汇总本周期<strong>产量登记</strong>的小计金额。</li>
+      <li>加班费 =「基本工资 ÷ 月标准工时」× 倍率 × 时长。</li>
+      <li>奖罚净额 = 奖励合计 － 处罚合计（来自人事模块的奖罚登记，<strong>可为负</strong>）。</li>
+      <li>水电扣费：取本周期水电费登记的合计扣款。</li>
+      <li>社保自负：优先取本周期<strong>社保缴费记录</strong>的个人承担合计，无记录时按「社保比例 × 基本工资」估算。</li>
+    </ul>
+  </div>
+</div>
+{% endblock %}

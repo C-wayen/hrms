@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+{# 培训记录表单 —— 新增与编辑共用（FR-TRN-02） #}
+
+{% block title %}{{ page_title }} · 人力资源管理系统{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger">
+      {% for error in form.non_field_errors %}<div><i class="bi bi-exclamation-triangle"></i> {{ error }}</div>{% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="card mb-3">
+    <div class="card-header"><i class="bi bi-clipboard-check"></i> 培训与考核记录</div>
+    <div class="card-body">
+      <div class="row g-3">
+        {% for field in form %}
+          {% include 'partials/form_field.html' with field=field %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="alert alert-info">
+    <i class="bi bi-info-circle"></i>
+    参与状态选为「考核通过 / 考核未通过」时，<strong>必须填写考核成绩</strong>——否则这条记录无法作为
+    「成绩登记」（FR-TRN-02）的依据。同一培训计划下同一员工只能有一条记录。
+  </div>
+
+  <div class="d-flex gap-2 mb-4">
+    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> 保存</button>
+    <a href="{% url 'trainingrecord-list' %}" class="btn btn-outline-secondary">取消</a>
+  </div>
+</form>
+{% endblock %}

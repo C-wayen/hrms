@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+{# 首页仪表盘 —— 关键指标 + 待办提醒（FR-RPT-01 概览、FR-PER-04 员工关怀） #}
+
+{% block title %}首页 · 人力资源管理系统{% endblock %}
+{% block page_title %}首页概览{% endblock %}
+
+{% block content %}
+{# ---------- 关键指标卡片 ---------- #}
+<div class="row g-3 mb-4">
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card h-100">
+      <div class="card-body">
+        <div class="stat-icon text-primary"><i class="bi bi-people"></i></div>
+        <div class="stat-value">{{ stats.on_job }}</div>
+        <div class="stat-label">在职人数</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card h-100">
+      <div class="card-body">
+        <div class="stat-icon text-success"><i class="bi bi-mortarboard"></i></div>
+        <div class="stat-value">{{ stats.intern }}</div>
+        <div class="stat-label">实习/试用期</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card h-100">
+      <div class="card-body">
+        <div class="stat-icon text-warning"><i class="bi bi-diagram-3"></i></div>
+        <div class="stat-value">{{ stats.departments }}</div>
+        <div class="stat-label">部门数</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card h-100">
+      <div class="card-body">
+        <div class="stat-icon text-info"><i class="bi bi-archive"></i></div>
+        <div class="stat-value">{{ stats.total }}</div>
+        <div class="stat-label">档案总数</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  {# ---------- 待审批请假（FR-PER-03） ---------- #}
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-calendar-check"></i> 待审批请假</span>
+        <span class="badge text-bg-secondary">{{ pending_leaves|length }}</span>
+      </div>
+      <div class="card-body p-0">
+        {% if pending_leaves %}
+          <table class="table table-hover mb-0 align-middle">
+            <thead>
+              <tr><th>申请人</th><th>类型</th><th>起止日期</th><th>天数</th></tr>
+            </thead>
+            <tbody>
+              {% for leave in pending_leaves %}
+                <tr>
+                  <td>
+                    {{ leave.employee.real_name }}
+                    <div class="text-muted small">{{ leave.employee.department.name|default:'—' }}</div>
+                  </td>
+                  <td>{{ leave.get_leave_type_display }}</td>
+                  <td class="small">{{ leave.start_date }} ~ {{ leave.end_date }}</td>
+                  <td>{{ leave.days }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="empty-state"><i class="bi bi-check2-circle"></i><p>没有待审批的请假</p></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ---------- 待审批转正（FR-PER-02） ---------- #}
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-person-check"></i> 待审批转正申请</span>
+        <span class="badge text-bg-secondary">{{ pending_regularizations|length }}</span>
+      </div>
+      <div class="card-body p-0">
+        {% if pending_regularizations %}
+          <table class="table table-hover mb-0 align-middle">
+            <thead>
+              <tr><th>申请人</th><th>原状态</th><th>期望转正日期</th></tr>
+            </thead>
+            <tbody>
+              {% for apply in pending_regularizations %}
+                <tr>
+                  <td>{{ apply.employee.real_name }}</td>
+                  <td>{{ apply.get_original_status_display }}</td>
+                  <td>{{ apply.expect_regular_date }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="empty-state"><i class="bi bi-check2-circle"></i><p>没有待审批的转正申请</p></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# ---------- 本周生日员工（FR-PER-04 员工关怀） ---------- #}
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header">
+        <i class="bi bi-gift"></i> 本周生日员工
+        <span class="text-muted small ms-2">（{{ today }} 起 7 天内，FR-PER-04 员工关怀）</span>
+      </div>
+      <div class="card-body">
+        {% if birthdays %}
+          <div class="d-flex flex-wrap gap-3">
+            {% for emp in birthdays %}
+              <div class="birthday-chip">
+                <i class="bi bi-cake2"></i>
+                <strong>{{ emp.real_name }}</strong>
+                <span class="text-muted">{{ emp.birth_date|date:"n 月 j 日" }}</span>
+                <span class="badge text-bg-light">{{ emp.department.name|default:'—' }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="empty-state"><i class="bi bi-emoji-smile"></i><p>本周没有员工过生日</p></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

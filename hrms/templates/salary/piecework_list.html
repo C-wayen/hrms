@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{# 计件 / 计时产量登记列表 —— 对应 FR-SAL-02 支持计件工资与计时工资混合计算 #}
+
+{% block title %}产量登记 · 人力资源管理系统{% endblock %}
+{% block page_title %}产量登记{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body pb-2">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small mb-1">员工 / 产品</label>
+        <input type="text" name="q" value="{{ filters.q }}" class="form-control form-control-sm"
+               placeholder="姓名 / 工号 / 产品">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1">薪酬周期</label>
+        <input type="month" name="salary_period" value="{{ filters.salary_period }}"
+               class="form-control form-control-sm">
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small mb-1">计薪方式</label>
+        <select name="work_mode" class="form-select form-select-sm">
+          <option value="">全部</option>
+          {% for value, label in mode_choices %}
+            <option value="{{ value }}" {% if filters.work_mode == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-5 d-flex gap-2">
+        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search"></i> 查询</button>
+        <a href="{% url 'piecework-list' %}" class="btn btn-sm btn-outline-secondary">重置</a>
+        {% if perms.salary.add_pieceworkrecord %}
+          <a href="{% url 'piecework-create' %}" class="btn btn-sm btn-success ms-auto">
+            <i class="bi bi-plus-lg"></i> 产量登记
+          </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>员工</th><th>生产日期</th><th>计薪方式</th><th>产品 / 工序</th>
+          <th class="text-end">数量</th><th class="text-end">单价</th>
+          <th class="text-end">工时</th><th class="text-end">时薪</th>
+          <th class="text-end">小计(元)</th><th class="text-end">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for record in records %}
+          <tr>
+            <td>{{ record.employee.real_name }}<span class="text-muted small">（{{ record.employee.employee_no }}）</span></td>
+            <td>{{ record.work_date }}</td>
+            <td>
+              {% if record.work_mode == 'piecework' %}
+                <span class="badge text-bg-info">计件</span>
+              {% else %}
+                <span class="badge text-bg-warning">计时</span>
+              {% endif %}
+            </td>
+            <td class="text-muted small">{{ record.product_name|default:'—' }}</td>
+            {# 只显示与当前计薪方式相关的两列，避免另一组数字造成误读 #}
+            <td class="text-end">{% if record.work_mode == 'piecework' %}{{ record.quantity }}{% else %}—{% endif %}</td>
+            <td class="text-end">{% if record.work_mode == 'piecework' %}{{ record.unit_price }}{% else %}—{% endif %}</td>
+            <td class="text-end">{% if record.work_mode == 'timework' %}{{ record.hours }}{% else %}—{% endif %}</td>
+            <td class="text-end">{% if record.work_mode == 'timework' %}{{ record.hourly_rate }}{% else %}—{% endif %}</td>
+            <td class="text-end fw-semibold">{{ record.amount|floatformat:2 }}</td>
+            <td class="text-end text-nowrap">
+              {% if perms.salary.change_pieceworkrecord %}
+                <a href="{% url 'piecework-update' record.pk %}" class="btn btn-sm btn-outline-primary" title="编辑">
+                  <i class="bi bi-pencil"></i>
+                </a>
+              {% endif %}
+              {% if perms.salary.delete_pieceworkrecord %}
+                <form method="post" action="{% url 'piecework-delete' record.pk %}" class="d-inline"
+                      onsubmit="return confirm('确认删除这条产量记录吗？');">
+                  {% csrf_token %}
+                  <button type="submit" class="btn btn-sm btn-outline-danger" title="删除">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="10"><div class="empty-state"><i class="bi bi-inbox"></i><p>没有符合条件的产量记录</p></div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include 'partials/pagination.html' %}
+{% endblock %}

@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+{# 工资条明细 —— 对应 FR-SAL-02 生成工资档案与历史薪酬查询 #}
+
+{% block title %}工资条 {{ record.salary_period }} · 人力资源管理系统{% endblock %}
+{% block page_title %}工资条{% endblock %}
+
+{% block content %}
+<div class="d-flex gap-2 mb-3">
+  <a href="{% url 'salaryrecord-list' %}" class="btn btn-sm btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> 返回列表
+  </a>
+  {% if record.pay_status == 'paid' %}
+    <span class="badge text-bg-success align-self-center">
+      <i class="bi bi-lock"></i> 已发放，金额已锁定
+    </span>
+  {% endif %}
+</div>
+
+<div class="card mb-3">
+  <div class="card-header d-flex align-items-center">
+    <span><i class="bi bi-person-badge"></i> 员工信息</span>
+    <span class="ms-auto text-muted small">薪酬周期：{{ record.salary_period }}</span>
+  </div>
+  <div class="card-body">
+    <div class="row g-3 small">
+      <div class="col-md-3"><span class="text-muted">姓名：</span>{{ record.employee.real_name }}</div>
+      <div class="col-md-3"><span class="text-muted">工号：</span>{{ record.employee.employee_no }}</div>
+      <div class="col-md-3"><span class="text-muted">部门：</span>{{ record.employee.department.name|default:'—' }}</div>
+      <div class="col-md-3"><span class="text-muted">岗位：</span>{{ record.employee.position.name|default:'—' }}</div>
+      <div class="col-md-3"><span class="text-muted">薪酬级别：</span>{{ record.employee.salary_level.name|default:'—' }}</div>
+      <div class="col-md-3">
+        <span class="text-muted">发放状态：</span>
+        {% if record.pay_status == 'paid' %}
+          <span class="badge text-bg-success">已发放</span>
+          <span class="text-muted">{{ record.paid_at|date:'Y-m-d H:i' }}</span>
+        {% else %}
+          <span class="badge text-bg-secondary">待发放</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-receipt"></i> 应发与扣减明细</div>
+      <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+          <thead class="table-light">
+            <tr><th>项目</th><th class="text-end">金额（元）</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>基本工资</td><td class="text-end">{{ record.base_salary|floatformat:2 }}</td></tr>
+            <tr><td>计件 / 计时工资</td><td class="text-end">{{ record.piecework_amount|floatformat:2 }}</td></tr>
+            <tr><td>加班费</td><td class="text-end">{{ record.overtime_amount|floatformat:2 }}</td></tr>
+            <tr>
+              <td>奖罚净额</td>
+              <td class="text-end {% if record.reward_punish_amount < 0 %}text-danger{% endif %}">
+                {{ record.reward_punish_amount|floatformat:2 }}
+              </td>
+            </tr>
+            <tr class="table-light">
+              <td class="fw-semibold">应发小计</td>
+              <td class="text-end fw-semibold">{{ record.net_pay|add:record.utility_deduction|add:record.social_deduction|floatformat:2 }}</td>
+            </tr>
+            <tr><td>水电扣费</td><td class="text-end text-danger">-{{ record.utility_deduction|floatformat:2 }}</td></tr>
+            <tr><td>社保自负部分</td><td class="text-end text-danger">-{{ record.social_deduction|floatformat:2 }}</td></tr>
+            <tr class="table-primary">
+              <td class="fw-bold">实发工资</td>
+              <td class="text-end fw-bold fs-5">{{ record.net_pay|floatformat:2 }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-braces"></i> 计算过程</div>
+      <div class="card-body small">
+        <div class="font-monospace">
+          {{ record.base_salary|floatformat:2 }}
+          {% if record.piecework_amount %} + {{ record.piecework_amount|floatformat:2 }}{% endif %}
+          {% if record.overtime_amount %} + {{ record.overtime_amount|floatformat:2 }}{% endif %}
+          {% if record.reward_punish_amount %} + ({{ record.reward_punish_amount|floatformat:2 }}){% endif %}
+          {% if record.utility_deduction %} - {{ record.utility_deduction|floatformat:2 }}{% endif %}
+          {% if record.social_deduction %} - {{ record.social_deduction|floatformat:2 }}{% endif %}
+          = <strong>{{ record.net_pay|floatformat:2 }}</strong>
+        </div>
+        <hr>
+        <p class="mb-0 text-muted">
+          合计项为「奖罚净额」，奖励为正、处罚为负，因此表现为加上一个可能带负号的数。
+        </p>
+      </div>
+    </div>
+
+    {% if record.remark %}
+      <div class="card">
+        <div class="card-header"><i class="bi bi-journal-text"></i> 备注</div>
+        <div class="card-body small">{{ record.remark }}</div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

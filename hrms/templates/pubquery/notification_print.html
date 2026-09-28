@@ -1,0 +1,170 @@
+{% load static %}
+{# 人事变动通知单 · 套红打印版式 —— 对应 FR-QRY-02 #}
+{# 独立布局（不继承 base.html）：打印时不应出现侧边栏与导航，只留公文本身 #}
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ doc.doc_no }} {{ doc.title }}</title>
+  <link rel="stylesheet" href="{% static 'vendor/bootstrap/bootstrap.min.css' %}">
+  <link rel="stylesheet" href="{% static 'css/hrms.css' %}">
+
+  <style>
+    /* 公文版式：红色抬头 + 黑色正文，A4 页面宽度 */
+    .doc-page {
+      width: 210mm;
+      min-height: 297mm;
+      margin: 0 auto;
+      padding: 20mm 18mm;
+      background: #fff;
+      box-shadow: 0 0 12px rgba(0, 0, 0, .12);
+    }
+
+    .doc-head {
+      text-align: center;
+      color: #c00;
+      border-bottom: 3px solid #c00;
+      padding-bottom: 10px;
+      margin-bottom: 6mm;
+    }
+
+    .doc-head h1 {
+      font-size: 26px;
+      font-weight: 700;
+      letter-spacing: 6px;
+      margin: 0 0 6px;
+      color: #c00;
+    }
+
+    .doc-head .org {
+      font-size: 13px;
+      letter-spacing: 2px;
+    }
+
+    .doc-no {
+      text-align: right;
+      font-size: 14px;
+      margin-bottom: 8mm;
+    }
+
+    .doc-title {
+      text-align: center;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-bottom: 8mm;
+    }
+
+    .doc-body {
+      font-size: 15px;
+      line-height: 2;
+      min-height: 60mm;
+      text-indent: 2em;
+      white-space: pre-wrap;
+    }
+
+    .doc-info {
+      margin-top: 8mm;
+      font-size: 14px;
+    }
+
+    .doc-sign {
+      margin-top: 18mm;
+      text-align: right;
+      font-size: 15px;
+      line-height: 2;
+    }
+
+    .doc-toolbar {
+      width: 210mm;
+      margin: 0 auto 4mm;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* 打印时隐藏工具栏与页面背景，只输出公文本身 */
+    @media print {
+      body { background: #fff !important; }
+      .doc-toolbar { display: none !important; }
+      .doc-page {
+        width: auto;
+        min-height: auto;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+      }
+      @page { size: A4; margin: 18mm; }
+    }
+  </style>
+</head>
+<body class="bg-light py-4">
+
+  {# 工具栏不参与打印（@media print 中已隐藏） #}
+  <div class="doc-toolbar">
+    <a href="{% url 'notification-list' %}" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-arrow-left"></i> 返回列表
+    </a>
+    <div class="d-flex gap-2">
+      <button type="button" class="btn btn-sm btn-primary" onclick="window.print()">
+        <i class="bi bi-printer"></i> 打印 / 另存为 PDF
+      </button>
+    </div>
+  </div>
+
+  <div class="doc-page">
+    {# ---------- 红头 ---------- #}
+    <div class="doc-head">
+      <h1>人 事 通 知</h1>
+      <div class="org">人力资源管理系统</div>
+    </div>
+
+    <div class="doc-no">编号：{{ doc.doc_no }}</div>
+
+    <div class="doc-title">{{ doc.title }}</div>
+
+    {# ---------- 正文 ---------- #}
+    <div class="doc-body">{{ doc.content }}</div>
+
+    {# ---------- 涉及员工信息 ---------- #}
+    <div class="doc-info">
+      <table class="table table-sm table-bordered" style="width: auto; min-width: 70%;">
+        <tbody>
+          <tr>
+            <th class="table-light" style="width: 120px;">姓名</th>
+            <td>{{ doc.employee.real_name }}</td>
+            <th class="table-light" style="width: 120px;">工号</th>
+            <td>{{ doc.employee.employee_no }}</td>
+          </tr>
+          <tr>
+            <th class="table-light">所属部门</th>
+            <td>{{ doc.employee.department.name|default:'—' }}</td>
+            <th class="table-light">岗位</th>
+            <td>{{ doc.employee.position.name|default:'—' }}</td>
+          </tr>
+          {% if doc.related_transfer %}
+            <tr>
+              <th class="table-light">原部门 / 岗位</th>
+              <td>{{ doc.related_transfer.before_department.name|default:'—' }}
+                / {{ doc.related_transfer.before_position.name|default:'—' }}</td>
+              <th class="table-light">新部门 / 岗位</th>
+              <td>{{ doc.related_transfer.after_department.name|default:'—' }}
+                / {{ doc.related_transfer.after_position.name|default:'—' }}</td>
+            </tr>
+            <tr>
+              <th class="table-light">生效日期</th>
+              <td colspan="3">{{ doc.related_transfer.effective_date|date:'Y 年 n 月 j 日' }}</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+
+    {# ---------- 签发 ---------- #}
+    <div class="doc-sign">
+      <div>签发人：{{ doc.issuer.real_name|default:'—' }}</div>
+      <div>签发日期：{{ doc.issue_date|date:'Y 年 n 月 j 日' }}</div>
+    </div>
+  </div>
+</body>
+</html>
