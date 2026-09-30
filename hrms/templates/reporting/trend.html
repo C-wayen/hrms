@@ -1,0 +1,158 @@
+{% extends 'base.html' %}
+{% load static %}
+{# 动态分析 —— 对应 FR-RPT-02 离职率统计、年度/季度人员流动趋势 #}
+
+{% block title %}动态分析 · 人力资源管理系统{% endblock %}
+{% block page_title %}动态分析{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body pb-2">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small mb-1">统计年度</label>
+        {# 年份改变会影响服务端的指标卡，因此走表单提交；粒度只影响图表，用 JS 切换#}
+        <form method="get" id="year-form">
+          <select name="year" class="form-select form-select-sm" onchange="this.form.submit()">
+            {% for item in years %}
+              <option value="{{ item }}" {% if selected_year == item %}selected{% endif %}>{{ item }} 年</option>
+            {% endfor %}
+          </select>
+        </form>
+      </div>
+      <div class="col-md-4">
+        <label class="form-label small mb-1">统计粒度</label>
+        <div class="btn-group btn-group-sm d-block" role="group" id="granularity-group">
+          <button type="button" class="btn btn-outline-primary active" data-granularity="month">按月</button>
+          <button type="button" class="btn btn-outline-primary" data-granularity="quarter">按季度</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="caliber-note mt-2">
+      <i class="bi bi-info-circle"></i>
+      统计口径：<strong>{{ selected_year }} 年</strong>的新增按<strong>入职日期</strong>归属月份，
+      离职按<strong>离职日期</strong>归属月份；离职率 = 当期离职人数 ÷ 期初在职人数。
+      季度离职率是把分子分母各自求和后再相除，不是把三个月的比率相加（比率不可加）。
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card">
+      <div class="card-body">
+        <div class="stat-icon text-primary"><i class="bi bi-people"></i></div>
+        <div class="stat-value">{{ summary.current_headcount }}</div>
+        <div class="stat-label">当前在职总人数</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card">
+      <div class="card-body">
+        <div class="stat-icon text-success"><i class="bi bi-person-plus"></i></div>
+        <div class="stat-value">{{ summary.hires }}</div>
+        <div class="stat-label">{{ selected_year }} 年新增</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card">
+      <div class="card-body">
+        <div class="stat-icon text-danger"><i class="bi bi-person-dash"></i></div>
+        <div class="stat-value">{{ summary.resignations }}</div>
+        <div class="stat-label">{{ selected_year }} 年离职</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card">
+      <div class="card-body">
+        <div class="stat-icon {% if summary.net_growth < 0 %}text-danger{% else %}text-success{% endif %}">
+          <i class="bi bi-arrow-left-right"></i>
+        </div>
+        <div class="stat-value {% if summary.net_growth < 0 %}text-danger{% endif %}">{{ summary.net_growth }}</div>
+        <div class="stat-label">净增（新增 − 离职）</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if notes %}
+  {# 口径一致性提醒：报表按日期统计，若状态与日期不同步，两个页面会各说各话 #}
+  <div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle"></i> <strong>数据提醒</strong>
+    <ul class="mb-0 mt-1 small">
+      {% for note in notes %}<li>{{ note }}</li>{% endfor %}
+    </ul>
+  </div>
+{% endif %}
+
+<div class="row g-3">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header"><i class="bi bi-graph-up-arrow"></i> 人员流动趋势（新增 / 离职 / 净增）</div>
+      <div class="card-body"><div id="chart-flow" class="chart-box"></div></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-percent"></i> 离职率</div>
+      <div class="card-body"><div id="chart-turnover" class="chart-box"></div></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-people-fill"></i> 期初在职人数</div>
+      <div class="card-body"><div id="chart-headcount" class="chart-box"></div></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'vendor/echarts/echarts.min.js' %}"></script>
+<script src="{% static 'js/hrms-charts.js' %}"></script>
+<script>
+  (function () {
+    var year = {{ selected_year }};
+    var granularity = 'month';
+
+    function render() {
+      // 切换粒度只需重新取数，不必整页刷新——这也是图表数据走接口的原因
+      var url = '{% url "report-trend-data" %}?year=' + year + '&granularity=' + granularity;
+      HRMSCharts.fetchData(url, function (data) {
+        HRMSCharts.line('chart-flow', data.labels, [
+          { name: '新增', data: data.hires },
+          { name: '离职', data: data.resignations },
+          { name: '净增', data: data.net }
+        ], '人');
+
+        HRMSCharts.line('chart-turnover', data.labels, [
+          { name: '离职率(%)', data: data.rates }
+        ], '%');
+
+        HRMSCharts.line('chart-headcount', data.labels, [
+          { name: '期初在职人数', data: data.openings, area: true }
+        ], '人');
+      });
+    }
+
+    document.getElementById('granularity-group').addEventListener('click', function (event) {
+      var button = event.target.closest('button[data-granularity]');
+      if (!button || button.classList.contains('active')) {
+        return;
+      }
+      Array.prototype.forEach.call(this.querySelectorAll('button'), function (item) {
+        item.classList.remove('active');
+      });
+      button.classList.add('active');
+      granularity = button.dataset.granularity;
+      render();
+    });
+
+    render();
+  })();
+</script>
+{% endblock %}

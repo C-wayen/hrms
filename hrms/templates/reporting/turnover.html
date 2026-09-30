@@ -1,0 +1,165 @@
+{% extends 'base.html' %}
+{% load static %}
+{# 人员流动统计 —— 对应 FR-RPT-03 在职人员总数统计、新增人员统计、辞职人员统计 #}
+{# 与「动态分析」的分工：本页回答「现在有多少人、这一年进出多少」， #}
+{# 动态分析页回答「这个过程是怎么变化的」 #}
+
+{% block title %}人员流动统计 · 人力资源管理系统{% endblock %}
+{% block page_title %}人员流动统计{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body pb-2">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-2">
+        <label class="form-label small mb-1">统计年度</label>
+        <select name="year" class="form-select form-select-sm">
+          {% for item in years %}
+            <option value="{{ item }}" {% if selected_year == item %}selected{% endif %}>{{ item }} 年</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small mb-1">部门范围</label>
+        <select name="department" class="form-select form-select-sm">
+          <option value="">全部部门</option>
+          {% for dept in departments %}
+            <option value="{{ dept.pk }}" {% if selected_department == dept.pk %}selected{% endif %}>{{ dept.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-7 d-flex gap-2">
+        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search"></i> 查询</button>
+        <a href="{% url 'report-turnover' %}" class="btn btn-sm btn-outline-secondary">重置</a>
+      </div>
+    </form>
+
+    <div class="caliber-note mt-2">
+      <i class="bi bi-info-circle"></i>
+      统计口径：范围为 <strong>{{ department_name }}</strong>（含下级部门）；
+      在职人数按日期快照判定；离职率 = {{ selected_year }} 年离职人数 ÷ 年初在职人数
+      （<strong>{{ summary.turnover_rate }}%</strong>）。
+      下方的「各部门进出对比」按员工<strong>当前</strong>所属部门归属。
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card">
+      <div class="card-body">
+        <div class="stat-icon text-primary"><i class="bi bi-people"></i></div>
+        <div class="stat-value">{{ summary.current_headcount }}</div>
+        <div class="stat-label">当前在职人员总数</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card">
+      <div class="card-body">
+        <div class="stat-icon text-success"><i class="bi bi-person-plus"></i></div>
+        <div class="stat-value">{{ summary.hires }}</div>
+        <div class="stat-label">{{ selected_year }} 年新增人员</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card">
+      <div class="card-body">
+        <div class="stat-icon text-danger"><i class="bi bi-person-dash"></i></div>
+        <div class="stat-value">{{ summary.resignations }}</div>
+        <div class="stat-label">{{ selected_year }} 年辞职人员</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card">
+      <div class="card-body">
+        <div class="stat-icon {% if summary.net_growth < 0 %}text-danger{% else %}text-success{% endif %}">
+          <i class="bi bi-arrow-left-right"></i>
+        </div>
+        <div class="stat-value {% if summary.net_growth < 0 %}text-danger{% endif %}">{{ summary.net_growth }}</div>
+        <div class="stat-label">净增（新增 − 辞职）</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if notes %}
+  <div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle"></i> <strong>数据提醒</strong>
+    <ul class="mb-0 mt-1 small">
+      {% for note in notes %}<li>{{ note }}</li>{% endfor %}
+    </ul>
+  </div>
+{% endif %}
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-bar-chart"></i> 各部门新增与辞职对比（{{ selected_year }} 年）</div>
+      <div class="card-body"><div id="chart-department" class="chart-box"></div></div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center">
+        <span><i class="bi bi-list-ul"></i> {{ selected_year }} 年离职人员明细</span>
+        <span class="badge text-bg-secondary ms-auto">最多显示 20 条</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>姓名</th><th>部门</th>
+              <th>入职</th><th>离职</th><th class="text-end">在职时长</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in resignations %}
+              <tr>
+                <td>
+                  {{ row.employee.real_name }}
+                  <div class="text-muted" style="font-size: 11px;">{{ row.employee.employee_no }}</div>
+                </td>
+                <td class="small">{{ row.employee.department.name|default:'—' }}</td>
+                <td class="small">{{ row.employee.hire_date|date:'Y-m-d'|default:'—' }}</td>
+                <td class="small">{{ row.employee.resign_date|date:'Y-m-d' }}</td>
+                <td class="text-end small">
+                  {% if row.tenure is not None %}{{ row.tenure }} 年{% else %}—{% endif %}
+                </td>
+              </tr>
+            {% empty %}
+              <tr>
+                <td colspan="5">
+                  <div class="empty-state">
+                    <i class="bi bi-inbox"></i>
+                    <p>{{ selected_year }} 年没有离职记录</p>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'vendor/echarts/echarts.min.js' %}"></script>
+<script src="{% static 'js/hrms-charts.js' %}"></script>
+<script>
+  (function () {
+    var url = '{% url "report-turnover-data" %}?year={{ selected_year }}';
+    HRMSCharts.fetchData(url, function (data) {
+      HRMSCharts.groupedBar('chart-department', data.labels, [
+        { name: '新增', data: data.hires },
+        { name: '辞职', data: data.resignations }
+      ]);
+    });
+  })();
+</script>
+{% endblock %}

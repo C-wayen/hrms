@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% load static %}
+{# 结构统计 —— 对应 FR-RPT-01 性别比例、年龄段分布、学历构成、工龄分布 #}
+
+{% block title %}结构统计 · 人力资源管理系统{% endblock %}
+{% block page_title %}结构统计{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body pb-2">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small mb-1">部门范围</label>
+        <select name="department" class="form-select form-select-sm">
+          <option value="">全部部门</option>
+          {% for dept in departments %}
+            <option value="{{ dept.pk }}" {% if selected_department == dept.pk %}selected{% endif %}>{{ dept.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-9 d-flex gap-2">
+        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search"></i> 查询</button>
+        <a href="{% url 'report-structure' %}" class="btn btn-sm btn-outline-secondary">重置</a>
+      </div>
+    </form>
+
+    {# 口径必须写在页面上：否则看报表的人只能猜「这个数字算的是哪些人」 #}
+    <div class="caliber-note mt-2">
+      <i class="bi bi-info-circle"></i>
+      统计口径：<strong>{{ department_name }}</strong>的在职人员，按日期判定在职（入职日已到、未离职），
+      已作废档案不计入。学历或出生日期为空的记录单列为「未填写」，不并入其它分类。
+    </div>
+  </div>
+</div>
+
+{# 指标卡由服务端渲染：首屏最该看到的东西，不必等 JS #}
+<div class="row g-3 mb-3">
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card">
+      <div class="card-body">
+        <div class="stat-icon text-primary"><i class="bi bi-people"></i></div>
+        <div class="stat-value">{{ overview.total }}</div>
+        <div class="stat-label">在职总人数</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card">
+      <div class="card-body">
+        <div class="stat-icon text-info"><i class="bi bi-gender-ambiguous"></i></div>
+        <div class="stat-value">{{ overview.male }} / {{ overview.female }}</div>
+        <div class="stat-label">男 / 女</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card">
+      <div class="card-body">
+        <div class="stat-icon text-success"><i class="bi bi-cake2"></i></div>
+        <div class="stat-value">{{ overview.avg_age }}<span class="fs-6"> 岁</span></div>
+        <div class="stat-label">平均年龄</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-6 col-lg-3">
+    <div class="card stat-card">
+      <div class="card-body">
+        <div class="stat-icon text-warning"><i class="bi bi-hourglass-split"></i></div>
+        <div class="stat-value">{{ overview.avg_tenure }}<span class="fs-6"> 年</span></div>
+        <div class="stat-label">平均工龄</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-pie-chart"></i> 性别比例</div>
+      <div class="card-body"><div id="chart-gender" class="chart-box"></div></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-mortarboard"></i> 学历构成</div>
+      <div class="card-body"><div id="chart-education" class="chart-box"></div></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-bar-chart"></i> 年龄段分布</div>
+      <div class="card-body"><div id="chart-age" class="chart-box"></div></div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card h-100">
+      <div class="card-header"><i class="bi bi-bar-chart-steps"></i> 工龄分布</div>
+      <div class="card-body"><div id="chart-tenure" class="chart-box"></div></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'vendor/echarts/echarts.min.js' %}"></script>
+<script src="{% static 'js/hrms-charts.js' %}"></script>
+<script>
+  // 图表数据全部来自后端聚合接口（FR-RPT-01），前端不做任何统计计算：
+  // 口径只有在 services.py 一处定义，前端一旦自己算就会与指标卡对不上
+  (function () {
+    var query = window.location.search || '';
+    HRMSCharts.fetchData('{% url "report-structure-data" %}' + query, function (data) {
+      HRMSCharts.pie('chart-gender', data.gender);
+      HRMSCharts.pie('chart-education', data.education);
+      HRMSCharts.bar('chart-age', data.age);
+      HRMSCharts.bar('chart-tenure', data.tenure);
+    });
+  })();
+</script>
+{% endblock %}

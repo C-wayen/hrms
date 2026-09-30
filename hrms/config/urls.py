@@ -33,6 +33,8 @@ urlpatterns = [
     path('training/', include('apps.training.urls')),     # 模块 2 培训管理
     path('salary/', include('apps.salary.urls')),         # 模块 3 薪酬管理
     path('query/', include('apps.pubquery.urls')),        # 模块 4 公共查询
+    path('report/', include('apps.reporting.urls')),      # 模块 5 报表统计
+    path('assistant/', include('apps.assistant.urls')),   # 模块 6 智能助手
 
     # --- 系统设置（FR-SYS-01 ~ 03）：直接复用 Django Admin 的对应页面 ---
     # 不重复开发：admin 已能完整管理基础数据与权限，这里只补命名路由，

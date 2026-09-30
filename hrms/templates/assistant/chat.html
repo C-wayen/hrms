@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{# 智能助手对话界面 —— 对应 FR-AI-01 智能 FAQ 问答、FR-AI-02 个人数据查询、UC-04 #}
+
+{% block title %}智能助手 · 人力资源管理系统{% endblock %}
+{% block page_title %}智能助手{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+
+  <div class="col-lg-8">
+    <div class="card">
+      <div class="card-header d-flex align-items-center">
+        <span><i class="bi bi-robot"></i> HR 在线助手</span>
+        <span class="ms-auto text-muted small">共 {{ faq_count }} 条制度问答知识</span>
+      </div>
+
+      <div class="card-body">
+        <div id="chat-window" class="chat-window"></div>
+
+        <form id="chat-form" class="mt-3" autocomplete="off">
+          {% csrf_token %}
+          <div class="input-group">
+            <input type="text" id="question-input" name="question" class="form-control"
+                   placeholder="例如：我还有几天年假？" maxlength="500">
+            <button type="submit" id="send-button" class="btn btn-primary">
+              <i class="bi bi-send"></i> 发送
+            </button>
+          </div>
+        </form>
+
+        <div class="chat-suggestions mt-3">
+          <div class="text-muted small mb-2">您可以试试：</div>
+          {% for item in suggestions %}
+            <button type="button" class="btn btn-sm btn-outline-secondary suggestion"
+                    data-question="{{ item }}">{{ item }}</button>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card mb-3">
+      <div class="card-header"><i class="bi bi-info-circle"></i> 我能回答什么</div>
+      <div class="card-body small">
+        <p class="mb-2"><strong>制度类问题</strong>（来自 FAQ 知识库）：</p>
+        <p class="text-muted mb-3">社保缴费比例、请假流程、发薪日期、年假规定、加班费算法…</p>
+
+        <p class="mb-2"><strong>您本人的数据</strong>：</p>
+        <ul class="text-muted mb-0 ps-3">
+          <li>剩余年假天数</li>
+          <li>本月 / 上月工资明细</li>
+          <li>社保缴费情况</li>
+          <li>本月考勤与加班时长</li>
+          <li>请假记录、个人档案</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><i class="bi bi-diagram-3"></i> 应答来源</div>
+      <div class="card-body small">
+        {# 把应答来源显式呈现：既能证明答案来自数据库而非模型编造，也便于排查答错的原因 #}
+        <div class="mb-2"><span class="badge text-bg-secondary">规则库</span> 命中制度类 FAQ</div>
+        <div class="mb-2"><span class="badge text-bg-primary">数据模板</span> 直接查询您本人的档案数据</div>
+        <div class="mb-2"><span class="badge text-bg-success">云 API</span> 由大模型生成（需联网）</div>
+        <div class="mb-2"><span class="badge text-bg-warning">离线兜底</span> 云端不可用时回落</div>
+        <hr>
+        <p class="text-muted mb-0">
+          涉及工资、社保等个人数据的问题<strong>一律查库回答</strong>，不经过大模型 ——
+          这样答案不可能被“编”出来。
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  (function () {
+    var window_ = document.getElementById('chat-window');
+    var form = document.getElementById('chat-form');
+    var input = document.getElementById('question-input');
+    var button = document.getElementById('send-button');
+    var csrf = form.querySelector('input[name="csrfmiddlewaretoken"]').value;
+    var busy = false;
+
+    /** 追加一条消息。 */
+    function appendMessage(role, text, meta) {
+      var item = document.createElement('div');
+      item.className = 'chat-msg ' + role;
+
+      var bubble = document.createElement('div');
+      bubble.className = 'chat-bubble';
+      // 必须用 textContent 而不是 innerHTML：提问内容由用户输入，
+      // 拼进 HTML 就等于给自己开了一个 XSS 的口子
+      bubble.textContent = text;
+      item.appendChild(bubble);
+
+      if (meta) {
+        var hint = document.createElement('div');
+        hint.className = 'chat-meta';
+        hint.textContent = meta;
+        item.appendChild(hint);
+      }
+
+      window_.appendChild(item);
+      window_.scrollTop = window_.scrollHeight;
+    }
+
+    function setBusy(value) {
+      busy = value;
+      button.disabled = value;
+      button.innerHTML = value
+        ? '<span class="spinner-border spinner-border-sm"></span> 思考中'
+        : '<i class="bi bi-send"></i> 发送';
+    }
+
+    function ask(question) {
+      if (busy || !question.trim()) {
+        return;
+      }
+      appendMessage('user', question);
+      input.value = '';
+      setBusy(true);
+
+      var body = new URLSearchParams();
+      body.append('question', question);
+
+      fetch('{% url "assistant-ask" %}', {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': csrf,
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin',
+        body: body
+      })
+        .then(function (response) { return response.json(); })
+        .then(function (data) {
+          if (!data.ok) {
+            appendMessage('bot', data.error || '请求失败，请稍后再试。');
+            return;
+          }
+          appendMessage('bot', data.answer, data.source_label + ' · ' + data.elapsed_ms + ' ms');
+        })
+        .catch(function () {
+          // 网络层失败也要给个说法，否则界面看起来像卡死了
+          appendMessage('bot', '网络异常，未能获取回答，请稍后重试。');
+        })
+        .then(function () {
+          setBusy(false);
+          input.focus();
+        });
+    }
+
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      ask(input.value);
+    });
+
+    Array.prototype.forEach.call(
+      document.querySelectorAll('.suggestion'),
+      function (element) {
+        element.addEventListener('click', function () {
+          ask(this.dataset.question);
+        });
+      }
+    );
+
+    // 开场白兼使用说明：空窗口会让人不知道从何问起
+    appendMessage(
+      'bot',
+      '您好！我是 HR 在线助手。\n'
+      + '您可以问我制度类问题（如「社保缴费比例是多少」），'
+      + '也可以查询您本人的数据（如「我还有几天年假」）。',
+      '规则库'
+    );
+    input.focus();
+  })();
+</script>
+{% endblock %}

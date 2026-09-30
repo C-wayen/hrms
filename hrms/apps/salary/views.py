@@ -36,7 +36,7 @@ from django.views.generic import (
 )
 
 from apps.sysconf.models import Department, Employee
-from apps.sysconf.scoping import DataScopeMixin
+from apps.sysconf.scoping import DataScopeMixin, department_and_children_ids
 
 from .forms import (
     OvertimeRecordForm,
@@ -76,23 +76,6 @@ def _last_month_period() -> str:
     return (today.replace(day=1) - timedelta(days=1)).strftime('%Y-%m')
 
 
-def _department_and_children(department) -> list:
-    """取某个部门及其所有下级部门的 id 列表。
-
-    只按单个部门过滤会漏掉下级部门的员工；组织树一旦有两层以上，
-    漏掉的恰恰是人数最多的基层部门。这里按层向下遍历，直到没有子部门。
-    """
-    ids = [department.pk]
-    frontier = [department.pk]
-    while frontier:
-        children = list(
-            Department.objects.filter(parent_id__in=frontier).values_list('pk', flat=True)
-        )
-        ids.extend(children)
-        frontier = children
-    return ids
-
-
 def _scoped_employees(department=None):
     """本次核算范围内的员工。
 
@@ -106,7 +89,9 @@ def _scoped_employees(department=None):
         .select_related('department', 'salary_level')
     )
     if department is not None:
-        queryset = queryset.filter(department_id__in=_department_and_children(department))
+        queryset = queryset.filter(
+            department_id__in=department_and_children_ids(department)
+        )
     return queryset
 
 
