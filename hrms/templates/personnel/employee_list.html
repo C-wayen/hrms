@@ -44,7 +44,7 @@
           <i class="bi bi-search"></i> 查询
         </button>
         <a href="{% url 'employee-list' %}" class="btn btn-sm btn-outline-secondary">重置</a>
-        {% if perms.personnel.add_employee %}
+        {% if perms.sysconf.add_employee %}
           <a href="{% url 'employee-create' %}" class="btn btn-sm btn-success ms-auto">
             <i class="bi bi-plus-lg"></i> 新增
           </a>
@@ -96,13 +96,13 @@
                  class="btn btn-sm btn-outline-secondary" title="查看">
                 <i class="bi bi-eye"></i>
               </a>
-              {% if perms.personnel.change_employee %}
+              {% if perms.sysconf.change_employee %}
                 <a href="{% url 'employee-update' emp.pk %}"
                    class="btn btn-sm btn-outline-primary" title="编辑">
                   <i class="bi bi-pencil"></i>
                 </a>
               {% endif %}
-              {% if perms.personnel.delete_employee %}
+              {% if perms.sysconf.delete_employee %}
                 <button type="button" class="btn btn-sm btn-outline-danger" title="删除"
                         data-bs-toggle="modal" data-bs-target="#deleteModal"
                         data-name="{{ emp.real_name }}"

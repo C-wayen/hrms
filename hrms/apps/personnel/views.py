@@ -52,7 +52,10 @@ class EmployeeListView(LoginRequiredMixin, PermissionRequiredMixin, ListView):
     template_name = 'personnel/employee_list.html'
     context_object_name = 'employees'
     paginate_by = 15
-    permission_required = 'personnel.view_employee'
+    # 【权限】Employee 模型定义在 sysconf 下，权限码前缀必须是 sysconf——
+    # 写成 personnel.view_employee 会得到一个**不存在的权限**，
+    # 结果除超级管理员外所有人都被拒（超级管理员因 is_superuser 恒通过，掩盖了问题）
+    permission_required = 'sysconf.view_employee'
 
     def get_queryset(self):
         # 软删除的档案不出现在列表；select_related 规避模板访问外键时的 N+1
@@ -106,7 +109,7 @@ class EmployeeDetailView(LoginRequiredMixin, PermissionRequiredMixin, DetailView
     model = Employee
     template_name = 'personnel/employee_detail.html'
     context_object_name = 'employee'
-    permission_required = 'personnel.view_employee'
+    permission_required = 'sysconf.view_employee'
 
     def get_queryset(self):
         return (
@@ -122,7 +125,7 @@ class EmployeeCreateView(LoginRequiredMixin, PermissionRequiredMixin, CreateView
     model = Employee
     form_class = EmployeeForm
     template_name = 'personnel/employee_form.html'
-    permission_required = 'personnel.add_employee'
+    permission_required = 'sysconf.add_employee'
     success_url = reverse_lazy('employee-list')
 
     def get_context_data(self, **kwargs):
@@ -147,7 +150,7 @@ class EmployeeUpdateView(LoginRequiredMixin, PermissionRequiredMixin, UpdateView
     model = Employee
     form_class = EmployeeForm
     template_name = 'personnel/employee_form.html'
-    permission_required = 'personnel.change_employee'
+    permission_required = 'sysconf.change_employee'
     success_url = reverse_lazy('employee-list')
 
     def get_context_data(self, **kwargs):
@@ -167,7 +170,7 @@ class EmployeeDeleteView(LoginRequiredMixin, PermissionRequiredMixin, View):
     同时停用登录账号——档案留着，但不应再能登录系统。
     """
 
-    permission_required = 'personnel.delete_employee'
+    permission_required = 'sysconf.delete_employee'
 
     def post(self, request, pk):
         employee = get_object_or_404(Employee, pk=pk, is_deleted=False)
@@ -708,7 +711,7 @@ class RewardPunishUpdateView(LoginRequiredMixin, PermissionRequiredMixin, Update
 
 
 @login_required
-@permission_required('personnel.view_employee', raise_exception=True)
+@permission_required('sysconf.view_employee', raise_exception=True)
 def birthday_list(request):
     """员工关怀：生日提醒与统计（FR-PER-04）。
 

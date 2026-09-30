@@ -40,8 +40,10 @@ def _years_ago(years: int) -> date:
 # =============================================================================
 
 
+# 【权限】Employee 属于 sysconf，不是 personnel——写成 personnel.view_employee
+# 是个不存在的权限码，会让 HR 这类非超级管理员一律被拒
 @login_required
-@permission_required('personnel.view_employee', raise_exception=True)
+@permission_required('sysconf.view_employee', raise_exception=True)
 def employee_search(request):
     """多维检索：按部门、职位、学历、工龄区间、状态复合查询（FR-QRY-01）。
 

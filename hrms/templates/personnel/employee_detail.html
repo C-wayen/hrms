@@ -16,7 +16,7 @@
       </span>
     </span>
     <div class="d-flex gap-2">
-      {% if perms.personnel.change_employee %}
+      {% if perms.sysconf.change_employee %}
         <a href="{% url 'employee-update' employee.pk %}" class="btn btn-sm btn-outline-primary">
           <i class="bi bi-pencil"></i> 编辑
         </a>

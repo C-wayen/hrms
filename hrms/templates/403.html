@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+{# 无权限提示页（403）—— 兜底用，对应 FR-SYS-01 权限控制 #}
+
+{# 设计原则：无权限的功能本来就不该出现在菜单里（见 context_processors.sidebar_menus） #}
+{# 它会把路由未实现、或无权限的菜单项直接过滤掉 #}
+{# 因此这个页面只在「手动输入网址」这类情况下才会被看到 #}
+{# 重点是把话说清楚并给出退路，而不是甩一个冷冰冰的 403 #}
+
+{% block title %}无访问权限 · 人力资源管理系统{% endblock %}
+{% block page_title %}无访问权限{% endblock %}
+
+{% block content %}
+<div class="card" style="max-width: 640px;">
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="bi bi-shield-lock"></i>
+
+      <p class="fs-5 mb-2 text-body">您当前的角色没有访问该功能的权限</p>
+
+      <p class="small mb-2">
+        该功能仅对特定角色开放。正常情况下它不会出现在您的左侧菜单中——
+        若您是手动输入网址访问的，请从左侧菜单选择需要的功能。
+      </p>
+
+      <p class="small mb-4">
+        如果您确信自己应当拥有该权限，请联系系统管理员调整您的所属角色。
+      </p>
+
+      <a href="{% url 'home' %}" class="btn btn-primary">
+        <i class="bi bi-house"></i> 返回首页
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

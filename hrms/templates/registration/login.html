@@ -18,9 +18,12 @@
       <p>HR Management System</p>
     </div>
 
-    {# next 由 LoginView 自动带上，登录后跳回用户原本想访问的页面 #}
+    {# next 必须显式放进表单：action 写死成 /login/ 会把地址栏上的 ?next=... 丢掉 #}
+    {# 丢掉后用户登录完一律回首页，而不是他原本想访问的页面 #}
+    {# 安全性由 LoginView 负责：它会用 url_has_allowed_host_and_scheme 校验该值 #}
     <form method="post" action="{% url 'login' %}">
       {% csrf_token %}
+      <input type="hidden" name="next" value="{{ next }}">
 
       {% if form.errors %}
         <div class="alert alert-danger py-2" role="alert">
