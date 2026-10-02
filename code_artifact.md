@@ -317,6 +317,16 @@ flowchart LR
     Admin --> UC04
 ```
 
+![image-20261002150012836](C:\Users\28191\AppData\Roaming\Typora\typora-user-images\image-20261002150012836.png)
+
+
+
+![image-20261002145814814](C:\Users\28191\AppData\Roaming\Typora\typora-user-images\image-20261002145814814.png)
+
+![image-20261002150240286](C:\Users\28191\AppData\Roaming\Typora\typora-user-images\image-20261002150240286.png)
+
+
+
 参与者与用例的对应关系如下：
 
 | 参与者         | 职责范围                                   | 可访问用例                                           |
@@ -345,7 +355,7 @@ flowchart LR
 
 > **编号说明**：UC-01 ~ UC-05 沿用初版编号与语义（UC-01、UC-02、UC-05 的名称做了扩展，
 > 以覆盖原设计遗漏的功能条目），UC-06 ~ UC-13 为本次新增。
-> 用例编号与代码中的注释保持一一对应，便于双向追溯。
+> 用例编号与代码中的注释保持一一对应，便于双向追溯。B
 > 其中 UC-05 对应原活动图所描述的「请假申请与审批」流程，与图 6-10 完全对应。
 
 ### 6.3 类图（图 6-2 ~ 图 6-5）

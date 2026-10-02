@@ -2,7 +2,8 @@
 
 > 配套文档：`HRMS/code_artifact.md` 第 6 章（SRS V1.3）
 > 图号规则：**图 6-1 ~ 图 6-15**，与 SRS 章节号绑定
-> 建模工具：Visual Paradigm Community Edition
+> 建模工具：
+>
 > 代码语言：Python（Entity & Interface）
 >
 > 本文件是**画图时的对照清单**：每张图画什么、每个类有哪些属性、关系基数是多少、
