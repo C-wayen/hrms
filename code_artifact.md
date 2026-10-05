@@ -319,13 +319,9 @@ flowchart LR
 
 ![image-20261002150012836](C:\Users\28191\AppData\Roaming\Typora\typora-user-images\image-20261002150012836.png)
 
-
-
 ![image-20261002145814814](C:\Users\28191\AppData\Roaming\Typora\typora-user-images\image-20261002145814814.png)
 
 ![image-20261002150240286](C:\Users\28191\AppData\Roaming\Typora\typora-user-images\image-20261002150240286.png)
-
-
 
 参与者与用例的对应关系如下：
 
