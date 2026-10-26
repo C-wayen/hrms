@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{# 组织机构树 —— 对应 FR-SYS-02 组织机构树形管理 #}
+
+{% block title %}组织机构 · 人力资源管理系统{% endblock %}
+{% block page_title %}组织机构{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body py-2 d-flex align-items-center gap-3 flex-wrap">
+    <span class="text-muted small">共 {{ total }} 个部门，其中启用 {{ active_count }} 个</span>
+    {% if perms.sysconf.add_department %}
+      <a href="{% url 'department-create' %}" class="btn btn-sm btn-success ms-auto">
+        <i class="bi bi-plus-lg"></i> 新增部门
+      </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>部门名称</th><th>编码</th><th>负责人</th>
+          <th class="text-end">排序</th><th>状态</th><th class="text-end">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for dept, depth in rows %}
+          <tr>
+            <td>
+              {# 按层级缩进——这是「树」唯一的视觉线索，去掉就退化成一张平表 #}
+              {% if depth %}
+                <span style="display:inline-block;width:{{ depth }}rem"></span>
+                <i class="bi bi-arrow-return-right text-muted small"></i>
+              {% else %}
+                <i class="bi bi-diagram-3 text-primary"></i>
+              {% endif %}
+              <strong>{{ dept.name }}</strong>
+            </td>
+            <td class="text-muted small">{{ dept.code }}</td>
+            <td>{{ dept.leader.real_name|default:'—' }}</td>
+            <td class="text-end">{{ dept.sort_order }}</td>
+            <td>
+              {% if dept.is_active %}
+                <span class="badge text-bg-success">启用</span>
+              {% else %}
+                <span class="badge text-bg-secondary">停用</span>
+              {% endif %}
+            </td>
+            <td class="text-end text-nowrap">
+              {% if perms.sysconf.change_department %}
+                <a href="{% url 'department-update' dept.pk %}" class="btn btn-sm btn-outline-primary" title="编辑">
+                  <i class="bi bi-pencil"></i>
+                </a>
+              {% endif %}
+              {% if perms.sysconf.delete_department %}
+                <a href="{% url 'department-delete' dept.pk %}" class="btn btn-sm btn-outline-danger" title="删除">
+                  <i class="bi bi-trash"></i>
+                </a>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="6">
+              <div class="empty-state"><i class="bi bi-inbox"></i><p>还没有部门，先新增一个</p></div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{# 只读角色（如 HR）看到的是完整组织树，只是没有操作按钮 #}
+<p class="text-muted small mt-2 mb-0">
+  <i class="bi bi-info-circle"></i>
+  部门下若仍有下级部门或员工，删除会被拒绝——这是故意的，避免产生游离数据。
+</p>
+{% endblock %}

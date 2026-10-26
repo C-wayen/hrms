@@ -1,0 +1,40 @@
+{# 新增 / 编辑表单页的通用主体 —— 各模块只需 extends base 后 include 本文件 #}
+{# 抽到 partials 的原因：sysconf 与 salary 两个模块的十几个表单页结构完全一致， #}
+{# 各写一份等于把同一处改动复制十几遍 #}
+
+<form method="post" novalidate>
+  {% csrf_token %}
+
+  {# 跨字段校验错误（例如「两次密码不一致」）只能在这里展示，字段级错误在 form_field.html 里 #}
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger">
+      {% for error in form.non_field_errors %}
+        <div><i class="bi bi-exclamation-triangle"></i> {{ error }}</div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <div class="row g-3">
+        {% for field in form %}
+          {% include 'partials/form_field.html' with field=field %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  {% if form_hint %}
+    <div class="alert alert-info">
+      <i class="bi bi-info-circle"></i> {{ form_hint }}
+    </div>
+  {% endif %}
+
+  <div class="d-flex gap-2 mb-4">
+    {# submit_label 可选：自助改密这类页面写「修改密码」比「保存」更清楚 #}
+    <button type="submit" class="btn btn-primary">
+      <i class="bi bi-check-lg"></i> {{ submit_label|default:'保存' }}
+    </button>
+    <a href="{% url cancel_url %}" class="btn btn-outline-secondary">取消</a>
+  </div>
+</form>

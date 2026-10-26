@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+{# 导航菜单列表 —— 对应 FR-SYS-03 导航菜单配置与角色可见性绑定 #}
+
+{% block title %}导航菜单 · 人力资源管理系统{% endblock %}
+{% block page_title %}导航菜单{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body py-2 d-flex align-items-center gap-3 flex-wrap">
+    <span class="text-muted small">共 {{ total }} 项，其中启用 {{ active_count }} 项</span>
+    {% if perms.sysconf.add_menu %}
+      <a href="{% url 'menu-create' %}" class="btn btn-sm btn-success ms-auto">
+        <i class="bi bi-plus-lg"></i> 新增菜单项
+      </a>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>菜单名称</th><th>路由名</th><th>可见角色</th>
+          <th class="text-end">排序</th><th>状态</th><th>侧边栏</th>
+          <th class="text-end">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for menu, depth in rows %}
+          <tr>
+            <td>
+              {% if depth %}
+                <span style="display:inline-block;width:{{ depth }}rem"></span>
+                <i class="bi bi-arrow-return-right text-muted small"></i>
+              {% else %}
+                <i class="bi {{ menu.icon|default:'bi-circle' }} text-primary"></i>
+              {% endif %}
+              <strong>{{ menu.title }}</strong>
+            </td>
+            <td>
+              {% if menu.url_name %}
+                <code class="small">{{ menu.url_name }}</code>
+              {% else %}
+                <span class="text-muted small">（分组，无路由）</span>
+              {% endif %}
+            </td>
+            <td>
+              {% for role in menu.visible_roles.all %}
+                <span class="badge text-bg-light">{{ role.name }}</span>
+              {% empty %}
+                <span class="badge text-bg-warning">所有角色都看不到</span>
+              {% endfor %}
+            </td>
+            <td class="text-end">{{ menu.sort_order }}</td>
+            <td>
+              {% if menu.is_active %}
+                <span class="badge text-bg-success">启用</span>
+              {% else %}
+                <span class="badge text-bg-secondary">停用</span>
+              {% endif %}
+            </td>
+            <td>
+              {# 会不会真的出现在侧边栏，取决于「启用」+「有可见角色」+「路由存在」三者同时成立 #}
+              {% if not menu.is_active %}
+                <span class="text-muted small">已停用</span>
+              {% elif menu.url_name and menu.pk in broken_route_ids %}
+                <span class="badge text-bg-danger" title="路由名找不到对应页面，侧边栏不会显示">路由不存在</span>
+              {% else %}
+                <span class="text-muted small">正常显示</span>
+              {% endif %}
+            </td>
+            <td class="text-end text-nowrap">
+              {% if perms.sysconf.change_menu %}
+                <a href="{% url 'menu-update' menu.pk %}" class="btn btn-sm btn-outline-primary" title="编辑">
+                  <i class="bi bi-pencil"></i>
+                </a>
+              {% endif %}
+              {% if perms.sysconf.delete_menu %}
+                <a href="{% url 'menu-delete' menu.pk %}" class="btn btn-sm btn-outline-danger" title="删除">
+                  <i class="bi bi-trash"></i>
+                </a>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7">
+              <div class="empty-state"><i class="bi bi-inbox"></i><p>还没有菜单项</p></div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<p class="text-muted small mt-2 mb-0">
+  <i class="bi bi-info-circle"></i>
+  侧边栏只显示「已启用」且「路由真正存在」的菜单项——路由没实现的会静默隐藏，
+  免得渲染成看得见点不动的死链。另外 <code>scripts/init_data.py</code> 里存有一份菜单基线，
+  重新运行它会把同名菜单项同步回基线配置。
+</p>
+{% endblock %}

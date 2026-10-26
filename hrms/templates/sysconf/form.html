@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{# 通用表单页 —— 新增与编辑共用（各模块都指向本文件，主体见 partials/form_page.html） #}
+
+{% block title %}{{ page_title }} · 人力资源管理系统{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+{% include 'partials/form_page.html' %}
+{% endblock %}

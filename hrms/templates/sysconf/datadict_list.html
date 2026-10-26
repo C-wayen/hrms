@@ -1,0 +1,93 @@
+{% extends 'base.html' %}
+{# 数据字典列表 —— 对应 FR-SYS-02 数据字典维护 #}
+
+{% block title %}数据字典 · 人力资源管理系统{% endblock %}
+{% block page_title %}数据字典{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body pb-2">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small mb-1">字典类型</label>
+        <select name="dict_type" class="form-select form-select-sm">
+          <option value="">全部类型</option>
+          {% for type_name in dict_types %}
+            <option value="{{ type_name }}" {% if filters.dict_type == type_name %}selected{% endif %}>
+              {{ type_name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label small mb-1">关键字</label>
+        <input type="text" name="q" value="{{ filters.q }}" class="form-control form-control-sm"
+               placeholder="字典键 / 字典值">
+      </div>
+
+      <div class="col-md-6 d-flex gap-2">
+        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search"></i> 查询</button>
+        <a href="{% url 'datadict-list' %}" class="btn btn-sm btn-outline-secondary">重置</a>
+        {% if perms.sysconf.add_datadict %}
+          <a href="{% url 'datadict-create' %}" class="btn btn-sm btn-success ms-auto">
+            <i class="bi bi-plus-lg"></i> 新增字典项
+          </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>字典类型</th><th>字典键</th><th>字典值</th>
+          <th class="text-end">排序</th><th>状态</th><th>备注</th>
+          <th class="text-end">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in dicts %}
+          <tr>
+            <td>{{ item.dict_type }}</td>
+            <td class="text-muted small">{{ item.dict_key }}</td>
+            <td>{{ item.dict_value }}</td>
+            <td class="text-end">{{ item.sort_order }}</td>
+            <td>
+              {% if item.is_active %}
+                <span class="badge text-bg-success">启用</span>
+              {% else %}
+                <span class="badge text-bg-secondary">停用</span>
+              {% endif %}
+            </td>
+            <td class="text-muted small">{{ item.remark|default:'—' }}</td>
+            <td class="text-end text-nowrap">
+              {% if perms.sysconf.change_datadict %}
+                <a href="{% url 'datadict-update' item.pk %}" class="btn btn-sm btn-outline-primary" title="编辑">
+                  <i class="bi bi-pencil"></i>
+                </a>
+              {% endif %}
+              {% if perms.sysconf.delete_datadict %}
+                <a href="{% url 'datadict-delete' item.pk %}" class="btn btn-sm btn-outline-danger" title="删除">
+                  <i class="bi bi-trash"></i>
+                </a>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="7">
+              <div class="empty-state"><i class="bi bi-inbox"></i><p>没有符合条件的字典项</p></div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include 'partials/pagination.html' %}
+{% endblock %}

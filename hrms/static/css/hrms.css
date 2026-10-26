@@ -26,6 +26,9 @@ body {
 }
 
 /* ---------- 侧边栏 ---------- */
+/* 桌面端把侧栏钉在视口上。不钉的话，长页面（80 人档案列表、报表页）往下滚时
+   菜单会跟着滚出视野，想切模块必须先滚回顶部。
+   钉住之后 .sidebar-nav 的 overflow-y 才真正生效——菜单高于视口时它自己滚。 */
 .sidebar {
   width: var(--sidebar-width);
   flex-shrink: 0;
@@ -33,6 +36,9 @@ body {
   color: var(--sidebar-fg);
   display: flex;
   flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
 }
 
 .sidebar-brand {
@@ -361,6 +367,9 @@ body {
     z-index: 1040;
     transform: translateX(-100%);
     transition: transform .22s ease;
+    /* 覆盖桌面端的 height: 100vh：窄屏下交给 top/bottom 撑满视口，
+       移动端浏览器地址栏伸缩会让 100vh 偏大，反而把菜单底部裁掉 */
+    height: auto;
   }
   .sidebar.show { transform: translateX(0); }
 }

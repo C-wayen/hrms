@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{# 用户与角色列表 —— 对应 FR-SYS-01 权限控制、FR-SYS-03 用户管理 #}
+
+{% block title %}用户与角色 · 人力资源管理系统{% endblock %}
+{% block page_title %}用户与角色{% endblock %}
+
+{% block content %}
+<div class="card mb-3">
+  <div class="card-body pb-2">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label small mb-1">关键字</label>
+        <input type="text" name="q" value="{{ filters.q }}" class="form-control form-control-sm"
+               placeholder="工号 / 姓名">
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label small mb-1">角色</label>
+        <select name="role" class="form-select form-select-sm">
+          <option value="">全部角色</option>
+          {% for role in roles %}
+            <option value="{{ role.name }}" {% if filters.role == role.name %}selected{% endif %}>
+              {{ role.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3">
+        <label class="form-label small mb-1">账号状态</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">全部状态</option>
+          {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="col-md-3 d-flex gap-2">
+        <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search"></i> 查询</button>
+        <a href="{% url 'employee-account' %}" class="btn btn-sm btn-outline-secondary">重置</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="alert alert-secondary py-2">
+  <i class="bi bi-info-circle"></i>
+  账号与档案是同一份数据，本页只管「能不能登录、属于什么角色」。
+  新增人员请走 <a href="{% url 'employee-create' %}">人事管理 · 新增职工</a>，
+  建完回到本页设置密码与角色。
+</div>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th>工号</th><th>姓名</th><th>所属部门</th><th>角色</th>
+          <th>登录</th><th>后台</th><th>最后登录</th>
+          <th class="text-end">操作</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for account in accounts %}
+          <tr>
+            <td><code>{{ account.employee_no }}</code></td>
+            <td>{{ account.real_name }}</td>
+            <td>{{ account.department.name|default:'—' }}</td>
+            <td>
+              {% for role in account.groups.all %}
+                <span class="badge text-bg-light">{{ role.name }}</span>
+              {% empty %}
+                <span class="text-muted small">未分配</span>
+              {% endfor %}
+            </td>
+            <td>
+              {% if account.is_active %}
+                <span class="badge text-bg-success">已启用</span>
+              {% else %}
+                <span class="badge text-bg-secondary">已停用</span>
+              {% endif %}
+              {# 有密码才能登录：建档时默认写入不可用密码，需在本页设置 #}
+              {% if not account.has_usable_password %}
+                <span class="badge text-bg-warning" title="尚未设置密码，无法登录">无密码</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if account.is_superuser %}
+                <span class="badge text-bg-danger">超级管理员</span>
+              {% elif account.is_staff %}
+                <span class="badge text-bg-primary">允许</span>
+              {% else %}
+                <span class="text-muted small">禁止</span>
+              {% endif %}
+            </td>
+            <td class="text-muted small">
+              {{ account.last_login|date:'Y-m-d H:i'|default:'从未登录' }}
+            </td>
+            <td class="text-end text-nowrap">
+              {% if perms.sysconf.change_employee %}
+                <a href="{% url 'account-update' account.pk %}" class="btn btn-sm btn-outline-primary"
+                   title="账号设置">
+                  <i class="bi bi-gear"></i> 账号设置
+                </a>
+              {% endif %}
+            </td>
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="8">
+              <div class="empty-state"><i class="bi bi-inbox"></i><p>没有符合条件的账号</p></div>
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% include 'partials/pagination.html' %}
+{% endblock %}

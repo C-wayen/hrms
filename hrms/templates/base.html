@@ -27,14 +27,16 @@
       {% for node in sidebar_menus %}
         {% if node.children %}
           <li class="nav-item">
+            {# 只有当前页面所属的那一组默认展开，其余收起；首页全部收起 #}
             <a class="nav-link sidebar-group" data-bs-toggle="collapse"
                href="#menu-{{ node.menu.id }}" role="button"
-               aria-expanded="true" aria-controls="menu-{{ node.menu.id }}">
+               aria-expanded="{% if node.is_active %}true{% else %}false{% endif %}"
+               aria-controls="menu-{{ node.menu.id }}">
               <i class="bi {{ node.menu.icon|default:'bi-circle' }}"></i>
               <span>{{ node.menu.title }}</span>
               <i class="bi bi-chevron-down ms-auto sidebar-caret"></i>
             </a>
-            <div class="collapse show" id="menu-{{ node.menu.id }}">
+            <div class="collapse{% if node.is_active %} show{% endif %}" id="menu-{{ node.menu.id }}">
               <ul class="nav flex-column sidebar-subnav">
                 {% for child in node.children %}
                   <li>

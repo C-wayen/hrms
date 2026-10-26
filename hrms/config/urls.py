@@ -14,7 +14,6 @@ HRMS 根路由表。
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import include, path
-from django.views.generic import RedirectView
 
 from apps.sysconf import views as sysconf_views
 
@@ -36,17 +35,11 @@ urlpatterns = [
     path('report/', include('apps.reporting.urls')),      # 模块 5 报表统计
     path('assistant/', include('apps.assistant.urls')),   # 模块 6 智能助手
 
-    # --- 系统设置（FR-SYS-01 ~ 03）：直接复用 Django Admin 的对应页面 ---
-    # 不重复开发：admin 已能完整管理基础数据与权限，这里只补命名路由，
-    # 让侧边栏菜单能正常跳转（用 pattern_name 而非硬编码 URL，改 admin 路径不受影响）
-    path('system/departments/', RedirectView.as_view(
-        pattern_name='admin:sysconf_department_changelist'), name='department-list'),
-    path('system/dicts/', RedirectView.as_view(
-        pattern_name='admin:sysconf_datadict_changelist'), name='datadict-list'),
-    path('system/accounts/', RedirectView.as_view(
-        pattern_name='admin:sysconf_employee_changelist'), name='employee-account'),
-    path('system/menus/', RedirectView.as_view(
-        pattern_name='admin:sysconf_menu_changelist'), name='menu-list'),
+    # --- 系统设置（FR-SYS-01 ~ 03）：组织机构 / 数据字典 / 用户与角色 / 导航菜单 ---
+    # 这四项原先是 RedirectView 跳到 Django Admin：功能完整，但会跳出系统主框架
+    # （侧边栏消失、风格割裂，验收时看着像「这块没做」）。现已改为自建页面，
+    # 与其它模块共用同一套布局与权限校验，详见 apps/sysconf/views.py
+    path('system/', include('apps.sysconf.urls')),
 
     # --- 首页仪表盘（放在最后，避免根路径抢占子模块路由）---
     path('', sysconf_views.home, name='home'),

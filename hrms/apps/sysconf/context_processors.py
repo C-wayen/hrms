@@ -5,6 +5,8 @@
 自动把「当前登录用户可见的菜单树」注入模板上下文，模板只负责展示，
 不必在每个视图里重复查询菜单。
 
+同时算出每个分组是否属于当前页面（is_active），供模板决定展开/收起。
+
 在 settings.TEMPLATES.OPTIONS.context_processors 中注册后全局生效。
 
 @author 王坤尧
@@ -43,6 +45,34 @@ def _has_route(menu) -> bool:
     return True
 
 
+def _is_active_group(request, children) -> bool:
+    """当前页面是否落在这组子菜单里，用于决定该分组默认展开还是收起。
+
+    先按路由名精确比对——菜单项本身指向的页面最准。
+    再按路径前缀兜底：新增/编辑/审批这类子页面并不在菜单里
+    （如 /personnel/employees/create/），但它们的路径以菜单项为前缀
+    （/personnel/employees/），同属一个模块，分组也应该展开。
+    少一层兜底，在“新增职工”页上人事管理就会意外收起。
+    """
+    match = getattr(request, 'resolver_match', None)
+    if match is None:
+        return False
+
+    if match.url_name and any(c.url_name == match.url_name for c in children):
+        return True
+
+    path = request.path
+    for child in children:
+        try:
+            child_path = reverse(child.url_name)
+        except NoReverseMatch:
+            continue
+        # 根路径不能当前缀，否则会命中所有页面
+        if child_path != '/' and path.startswith(child_path):
+            return True
+    return False
+
+
 def sidebar_menus(request):
     """注入 sidebar_menus：形如 [{menu, children}, ...] 的两级菜单树。"""
     user = getattr(request, 'user', None)
@@ -77,6 +107,12 @@ def sidebar_menus(request):
         # 本来有子菜单、实现后一个可用的都不剩 → 整个分组不显示（点开是空的，没意义）
         if menu.id in parents_with_children and not children:
             continue
-        tree.append({'menu': menu, 'children': children})
+        # 只展开当前页面所属的那一组，其余收起；
+        # 首页不落进任何分组，于是全部收起——即「首页默认全收起」
+        tree.append({
+            'menu': menu,
+            'children': children,
+            'is_active': _is_active_group(request, children),
+        })
 
     return {'sidebar_menus': tree}

@@ -252,7 +252,9 @@ MENUS = [
         ('请假申请', 'leave-list', '系统管理员', 'HR 专员/经理', '普通职工'),
         ('奖罚登记', 'rewardpunish-list', '系统管理员', 'HR 专员/经理'),
         ('员工关怀', 'birthday-list', '系统管理员', 'HR 专员/经理'),
-    ], ['系统管理员', 'HR 专员/经理']),
+        # 分组本身也必须带上普通职工：菜单是按 visible_roles 过滤整张表的，
+        # 父分组不可见时子项会被一并丢掉——「请假申请」自己配了普通职工也没用
+    ], ['系统管理员', 'HR 专员/经理', '普通职工']),
 
     ('培训管理', None, 'bi-mortarboard', 3, [
         ('课程库', 'course-list', '系统管理员', 'HR 专员/经理'),
@@ -291,6 +293,7 @@ MENUS = [
         ('我的档案', 'my-profile', '系统管理员', 'HR 专员/经理', '普通职工'),
         ('我的工资', 'my-salary', '系统管理员', 'HR 专员/经理', '普通职工'),
         ('我的请假', 'my-leave', '系统管理员', 'HR 专员/经理', '普通职工'),
+        ('修改密码', 'my-password', '系统管理员', 'HR 专员/经理', '普通职工'),
     ], ['系统管理员', 'HR 专员/经理', '普通职工']),
 
     ('智能助手', 'assistant-chat', 'bi-robot', 9, [], ['系统管理员', 'HR 专员/经理', '普通职工']),
@@ -403,7 +406,7 @@ def create_faqs() -> None:
 
 
 # =============================================================================
-# 六、演示员工档案（不可登录，仅作列表与报表数据）
+# 六、演示员工档案（默认密码 = 姓名首字母 + 888888，可直接登录演示）
 #     分两批：8 位手工命名的「主角」（被角色分配与验证脚本引用，工号不可改）
 #             + 批量生成的普通员工，合计 80 人
 # =============================================================================
@@ -431,15 +434,23 @@ DEMO_EMPLOYEES = [
 
 
 def create_demo_employees(maps: dict, level_map: dict) -> None:
-    """建立演示员工档案。
+    """建立演示员工档案，并统一设置默认密码。
 
-    统一使用不可用密码：这些记录只用于列表展示与报表统计，
-    需要能登录的演示账号时，请在 admin 中单独为其设置密码。
+    默认密码 = 姓名拼音首字母 + 888888（张伟 → ZW888888）。
+    这样演示时输入工号与这个密码就能进，不必先跑一趟 admin 去设密码。
+
+    已存在的账号也会把密码重置回默认值：本脚本是演示数据种子，
+    「所有人默认密码一致」这条规则得能靠重跑一次就恢复。
+    （超级管理员 ADMIN001 不在此列，它的密码来自 .env。）
     """
     created = 0
+    reset = 0
     for idx, (no, name, gender, dept_code, pos_code, level_code,
               education, hire_date, birth_date) in enumerate(DEMO_EMPLOYEES, start=1):
-        if Employee.objects.filter(employee_no=no).exists():
+        employee = Employee.objects.filter(employee_no=no).first()
+        if employee is not None:
+            _reset_password(employee, name)
+            reset += 1
             continue
         Employee.objects.create_user(
             username=no,  # 工号即账号
@@ -458,10 +469,10 @@ def create_demo_employees(maps: dict, level_map: dict) -> None:
             hire_date=hire_date,
             birth_date=birth_date,
             is_active=True,
-            # password 不传 → Django 会写入不可用密码，该账号无法登录
+            password=default_password(name),
         )
         created += 1
-    print(f'  [OK] 演示员工 新建 {created} 个，跳过 {len(DEMO_EMPLOYEES) - created} 个已存在的')
+    print(f'  [OK] 演示员工 新建 {created} 个，重置默认密码 {reset} 个')
 
 
 def assign_demo_roles(roles: dict) -> None:
@@ -568,6 +579,67 @@ SURNAMES = ('王 李 张 刘 陈 杨 黄 赵 吴 周 徐 孙 马 朱 胡 郭 何
 GIVEN_NAMES = ('伟 芳 娜 敏 静 丽 强 磊 洋 艳 勇 军 杰 娟 涛 明 超 秀 霞 平 '
                '刚 桂英 华 玉兰 春梅 建文 辉 力 宁 鹏 飞 宇 欣 悦 晨 琳 蕾').split()
 
+# 【默认密码】员工默认密码 = 姓名拼音首字母（大写）+ 888888，例如：
+#     张伟 -> ZW888888        赵晓雯 -> ZXW888888
+# 为什么不引 pypinyin：姓名全部取自上面的 SURNAMES / GIVEN_NAMES 池，
+# 外加 8 位手写的演示员工，一张字表就能覆盖完；为一个演示密码给项目添一个
+# 运行时依赖不划算，而这张表把「密码是怎么算出来的」写得更明白。
+# 漏字的后果是密码静默少一个字母、而账号照样建得出来，要等人拿着密码登不进去
+# 才会暴露，因此下面配了 _assert_pinyin_covered，缺字直接终止。
+PINYIN_INITIAL = {
+    # —— 姓（30）——
+    '王': 'W', '李': 'L', '张': 'Z', '刘': 'L', '陈': 'C', '杨': 'Y',
+    '黄': 'H', '赵': 'Z', '吴': 'W', '周': 'Z', '徐': 'X', '孙': 'S',
+    '马': 'M', '朱': 'Z', '胡': 'H', '郭': 'G', '何': 'H', '高': 'G',
+    '林': 'L', '罗': 'L', '郑': 'Z', '梁': 'L', '谢': 'X', '宋': 'S',
+    '唐': 'T', '许': 'X', '韩': 'H', '冯': 'F', '邓': 'D', '曹': 'C',
+    # —— 名（41）——
+    '伟': 'W', '芳': 'F', '娜': 'N', '敏': 'M', '静': 'J', '丽': 'L',
+    '强': 'Q', '磊': 'L', '洋': 'Y', '艳': 'Y', '勇': 'Y', '军': 'J',
+    '杰': 'J', '娟': 'J', '涛': 'T', '明': 'M', '超': 'C', '秀': 'X',
+    '霞': 'X', '平': 'P', '刚': 'G', '桂': 'G', '英': 'Y', '华': 'H',
+    '玉': 'Y', '兰': 'L', '春': 'C', '梅': 'M', '建': 'J', '文': 'W',
+    '辉': 'H', '力': 'L', '宁': 'N', '鹏': 'P', '飞': 'F', '宇': 'Y',
+    '欣': 'X', '悦': 'Y', '晨': 'C', '琳': 'L', '蕾': 'L',
+    # —— 8 位手写演示员工用到、但不在上面两个池里的字 ——
+    '浩': 'H', '晓': 'X', '雯': 'W', '雅': 'Y',
+}
+
+DEFAULT_PASSWORD_SUFFIX = '888888'
+
+
+def default_password(real_name: str) -> str:
+    """按「姓名拼音首字母 + 888888」生成默认密码。
+
+    例：张伟 -> ZW888888；赵晓雯 -> ZXW888888
+    """
+    initials = ''.join(PINYIN_INITIAL[ch] for ch in real_name if ch in PINYIN_INITIAL)
+    return f'{initials}{DEFAULT_PASSWORD_SUFFIX}'
+
+
+def _assert_pinyin_covered(names) -> None:
+    """确认字表覆盖了所有会用到的汉字，缺一个就直接终止。
+
+    不检查的话，漏字会让默认密码静默少一个字母——账号照建，
+    直到有人拿着密码登不进去才会发现，排查成本远高于这里报错。
+    """
+    missing = {ch for name in names for ch in name if ch not in PINYIN_INITIAL}
+    if missing:
+        raise SystemExit(
+            f'[!] PINYIN_INITIAL 缺少这些字的首字母映射：{"".join(sorted(missing))}\n'
+            f'    默认密码无法生成，请先补全 scripts/init_data.py 里的字表。'
+        )
+
+
+def _reset_password(employee, real_name: str) -> None:
+    """把账号密码重置为默认值。
+
+    只写 password 一个字段（update_fields）：Employee.save() 会顺带同步
+    username，写全字段等于把整行再覆盖一遍，没必要。
+    """
+    employee.set_password(default_password(real_name))
+    employee.save(update_fields=['password'])
+
 
 def _months_before(anchor: date, months: int) -> date:
     """返回 anchor 往前推 months 个月的日期（同日）。
@@ -642,9 +714,15 @@ def create_bulk_employees(maps: dict, level_map: dict) -> None:
 
     created = 0
     resigned = 0
+    reset = 0
     for offset, (dept_code, position_code) in enumerate(slots):
         employee_no = f'E{BULK_FIRST_NO + offset}'
-        if Employee.objects.filter(employee_no=employee_no).exists():
+        existing = Employee.objects.filter(employee_no=employee_no).first()
+        if existing is not None:
+            # 已存在就不重建，只把默认密码同步回去（用库里现有的姓名算首字母）
+            if existing.real_name:
+                _reset_password(existing, existing.real_name)
+                reset += 1
             continue
 
         # 每 5 个名额安排 1 人离职（72 人里 14 人），离职日期从池中按序取，
@@ -685,7 +763,8 @@ def create_bulk_employees(maps: dict, level_map: dict) -> None:
             resign_date=resign_date,
             # 离职员工同时停用账号，与 EmployeeDeleteView 的处理保持一致
             is_active=resign_date is None,
-            # password 不传 → Django 写入不可用密码，这些账号无法登录
+            # 默认密码 = 姓名首字母 + 888888，与演示员工保持一致
+            password=default_password(real_name),
         )
         created += 1
         if resign_date:
@@ -693,12 +772,18 @@ def create_bulk_employees(maps: dict, level_map: dict) -> None:
 
     total = Employee.objects.count()
     print(f'  [OK] 批量员工 新建 {created} 个（其中已离职 {resigned} 个），'
-          f'跳过 {len(slots) - created} 个已存在的')
+          f'重置默认密码 {reset} 个')
     print(f'       档案总数 {total} 人'
           f'{"（已达目标）" if total >= BULK_TOTAL_TARGET else f"（目标 {BULK_TOTAL_TARGET} 人）"}')
 
 
 def main() -> int:
+    # 建任何账号之前先确认拼音字表完整：漏字会让默认密码静默算错，
+    # 而账号照样建得出来，要等人登不进去才发现
+    _assert_pinyin_covered(
+        [row[1] for row in DEMO_EMPLOYEES] + list(SURNAMES) + list(GIVEN_NAMES)
+    )
+
     print('=== 1. 角色与权限 (FR-SYS-01) ===')
     roles = create_roles()
 

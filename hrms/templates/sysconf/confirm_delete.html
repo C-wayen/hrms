@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{# 通用删除确认页（主体见 partials/confirm_delete_page.html） #}
+
+{% block title %}{{ page_title }} · 人力资源管理系统{% endblock %}
+{% block page_title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+{% include 'partials/confirm_delete_page.html' %}
+{% endblock %}
