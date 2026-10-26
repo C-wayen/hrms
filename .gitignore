@@ -31,6 +31,10 @@
 *.tmp
 *.orig
 
+# ---- UML 模型工程 ----
+# Visual Paradigm 工程（.vpp）与自动备份体积大、属二进制文件，仅在本地保留。
+uml/
+
 # ---- 系统文件 ----
 Thumbs.db
 desktop.ini
