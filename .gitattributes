@@ -21,3 +21,4 @@
 # Office 文档：按二进制处理，避免换行转换损坏文件
 *.docx binary
 *.xlsx binary
+
