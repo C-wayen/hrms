@@ -18,6 +18,6 @@
 *.woff binary
 *.woff2 binary
 
-# Word 文档：课程文档要随仓库一起交付，同样不能做换行转换
+# Office 文档：按二进制处理，避免换行转换损坏文件
 *.docx binary
 *.xlsx binary
