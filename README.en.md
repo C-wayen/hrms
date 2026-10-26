@@ -6,17 +6,17 @@ HRMS is a web-based Human Resource Management System built with **Django 5.2 LTS
 
 ## Features
 
-| Module | Highlights |
-| --- | --- |
-| Dashboard | Headcount, department count, pending approvals, and birthdays this week |
-| Personnel | Employee records, regularization applications and approvals, social insurance, attendance, leave requests and approvals, rewards and punishments, employee care |
-| Payroll | Salary levels and standards, overtime / utility fee / piecework records, batch payroll calculation, payroll records, payment locking, my salary |
-| Training | Course library, training plans, training records and scores |
-| Public Query | Multi-dimensional employee search, notification printing |
-| Reporting | Workforce structure (gender / age / education / tenure), trend analysis, turnover statistics (ECharts) |
-| System Settings | Organization tree, data dictionaries, users and roles, navigation menus and visible roles |
-| My Workspace | My profile, my salary, my leave requests, change password |
-| AI Assistant | Policy FAQ, personal data lookup, three-level fallback between rule mode and cloud API |
+| Module          | Highlights                                                                                                                                                      |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dashboard       | Headcount, department count, pending approvals, and birthdays this week                                                                                         |
+| Personnel       | Employee records, regularization applications and approvals, social insurance, attendance, leave requests and approvals, rewards and punishments, employee care |
+| Payroll         | Salary levels and standards, overtime / utility fee / piecework records, batch payroll calculation, payroll records, payment locking, my salary                 |
+| Training        | Course library, training plans, training records and scores                                                                                                     |
+| Public Query    | Multi-dimensional employee search, notification printing                                                                                                        |
+| Reporting       | Workforce structure (gender / age / education / tenure), trend analysis, turnover statistics (ECharts)                                                          |
+| System Settings | Organization tree, data dictionaries, users and roles, navigation menus and visible roles                                                                       |
+| My Workspace    | My profile, my salary, my leave requests, change password                                                                                                       |
+| AI Assistant    | Policy FAQ, personal data lookup, three-level fallback between rule mode and cloud API                                                                          |
 
 ## Tech Stack
 
@@ -95,17 +95,17 @@ cp .env.example .env
 
 Edit `.env` and fill in at least `DB_PASSWORD`, `SUPERUSER_PASSWORD`, and `DJANGO_SECRET_KEY`.
 
-| Variable | Description |
-| --- | --- |
-| `DJANGO_SECRET_KEY` | Django secret key; always use a random value in production |
-| `DJANGO_DEBUG` | `True` for development, must be `False` in production |
-| `DJANGO_ALLOWED_HOSTS` | Allowed domain names / IPs, comma-separated |
-| `DB_NAME` / `DB_USER` / `DB_PASSWORD` | MySQL database name and credentials |
-| `DB_HOST` / `DB_PORT` | MySQL host and port, default `127.0.0.1:3306` |
-| `AI_PROVIDER` | `rules` (default, offline rule mode) or `cloud` (DeepSeek) |
-| `DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL` | Required for cloud mode |
-| `AI_REQUEST_TIMEOUT` | Cloud request timeout in seconds; falls back to rule mode on timeout |
-| `SUPERUSER_*` | Information used to create the initial superuser |
+| Variable                                    | Description                                                          |
+| ------------------------------------------- | -------------------------------------------------------------------- |
+| `DJANGO_SECRET_KEY`                       | Django secret key; always use a random value in production           |
+| `DJANGO_DEBUG`                            | `True` for development, must be `False` in production            |
+| `DJANGO_ALLOWED_HOSTS`                    | Allowed domain names / IPs, comma-separated                          |
+| `DB_NAME` / `DB_USER` / `DB_PASSWORD` | MySQL database name and credentials                                  |
+| `DB_HOST` / `DB_PORT`                   | MySQL host and port, default`127.0.0.1:3306`                       |
+| `AI_PROVIDER`                             | `rules` (default, offline rule mode) or `cloud` (DeepSeek)       |
+| `DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL`   | Required for cloud mode                                              |
+| `AI_REQUEST_TIMEOUT`                      | Cloud request timeout in seconds; falls back to rule mode on timeout |
+| `SUPERUSER_*`                             | Information used to create the initial superuser                     |
 
 Generate a secret key:
 
@@ -137,17 +137,17 @@ python scripts/init_data.py
 python manage.py runserver
 ```
 
-Open <http://127.0.0.1:8000/> and sign in with the superuser account from `.env`.
+Open [http://127.0.0.1:8000/](http://127.0.0.1:8000/) and sign in with the superuser account from `.env`.
 
 ## Roles and Permissions
 
 The seed script creates three roles and assigns permissions by module:
 
-| Role | Scope |
-| --- | --- |
-| System Administrator | All business modules and system settings |
-| HR Specialist / Manager | Personnel, payroll, training, public queries, reporting, AI assistant; read-only system settings, but can maintain employee records |
-| Employee | Submit leave requests, view their own profile / salary / leave records, use the AI assistant, and change their password; no access to the full employee list |
+| Role                    | Scope                                                                                                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| System Administrator    | All business modules and system settings                                                                                                                     |
+| HR Specialist / Manager | Personnel, payroll, training, public queries, reporting, AI assistant; read-only system settings, but can maintain employee records                          |
+| Employee                | Submit leave requests, view their own profile / salary / leave records, use the AI assistant, and change their password; no access to the full employee list |
 
 Additional row-level scoping is enforced in views. For example, employees can only see their own leave requests, salary, and attendance data.
 
@@ -155,13 +155,13 @@ Additional row-level scoping is enforced in views. For example, employees can on
 
 The scripts under `hrms/scripts/` provide repeatable end-to-end checks. They use the Django test client to call views and verify database results directly, so no running server is required. Migrations and `init_data.py` must have completed first.
 
-| Script | What it verifies |
-| --- | --- |
-| `scripts/verify_sysconf.py` | CRUD for departments, dictionaries, users and roles, and navigation menus |
-| `scripts/verify_salary.py` | Payroll formulas, transaction consistency, payment locking, and row-level permissions |
-| `scripts/verify_reporting.py` | Definitions and API data for structure, trend, and turnover reports |
-| `scripts/verify_assistant.py` | FAQ matching, personal data lookup, access denial, and offline fallback |
-| `scripts/verify_menu_permissions.py` | Consistency between visible menu items and actual page permissions for each role |
+| Script                                 | What it verifies                                                                      |
+| -------------------------------------- | ------------------------------------------------------------------------------------- |
+| `scripts/verify_sysconf.py`          | CRUD for departments, dictionaries, users and roles, and navigation menus             |
+| `scripts/verify_salary.py`           | Payroll formulas, transaction consistency, payment locking, and row-level permissions |
+| `scripts/verify_reporting.py`        | Definitions and API data for structure, trend, and turnover reports                   |
+| `scripts/verify_assistant.py`        | FAQ matching, personal data lookup, access denial, and offline fallback               |
+| `scripts/verify_menu_permissions.py` | Consistency between visible menu items and actual page permissions for each role      |
 
 Example:
 
