@@ -35,6 +35,7 @@ from django.views.generic import (
     UpdateView,
 )
 
+from apps.sysconf.mixins import FormPageMixin
 from apps.sysconf.models import Department, Employee
 from apps.sysconf.scoping import DataScopeMixin, department_and_children_ids
 
@@ -113,25 +114,6 @@ class SoftDeleteView(LoginRequiredMixin, PermissionRequiredMixin, View):
         obj.save(update_fields=['is_deleted'])
         messages.success(request, self.success_message)
         return redirect(self.success_url_name)
-
-
-class FormPageMixin:
-    """为新增 / 编辑表单页补齐统一的页面上下文。
-
-    把这三个键抽出来的原因：五个模块的新增与编辑视图共 10 处都要传它们，
-    任何一处写漏，模板就会渲染出一个没有标题、取消按钮指向错误页面的表单。
-    """
-
-    page_title = ''
-    form_hint = ''
-    cancel_url = ''
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['page_title'] = self.page_title
-        context['form_hint'] = self.form_hint
-        context['cancel_url'] = self.cancel_url
-        return context
 
 
 # =============================================================================
