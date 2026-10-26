@@ -47,4 +47,13 @@ urlpatterns = [
 
     # --- 员工关怀（FR-PER-04）---
     path('birthdays/', views.birthday_list, name='birthday-list'),
+
+    # --- 我的（FR-PER-01 我的档案、FR-PER-03 我的请假）---
+    # 普通职工没有 sysconf.view_employee 权限，本人档案必须走独立入口，
+    # 不能靠「档案列表按登录用户过滤」——那需要先有权限进列表
+    path('my-profile/', views.my_profile, name='my-profile'),
+    path('my-leaves/', views.MyLeaveListView.as_view(), name='my-leave'),
+    # 修改密码与上面两项同属「我的」（用户视角的自助入口），
+    # 因此放在同一个 URL 前缀下，与菜单分组保持一致
+    path('my-password/', views.my_password, name='my-password'),
 ]

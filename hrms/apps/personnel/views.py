@@ -10,6 +10,7 @@
 from datetime import timedelta
 
 from django.contrib import messages
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.decorators import login_required, permission_required
 from django.contrib.auth.mixins import LoginRequiredMixin, PermissionRequiredMixin
 from django.db import transaction
@@ -27,6 +28,7 @@ from .forms import (
     EmployeeForm,
     LeaveApproveForm,
     LeaveRequestForm,
+    PasswordChangeSelfForm,
     RegularizationApplyForm,
     RegularizationApproveForm,
     RewardPunishForm,
@@ -182,6 +184,50 @@ class EmployeeDeleteView(LoginRequiredMixin, PermissionRequiredMixin, View):
             f'已删除职工「{employee.real_name}」的档案，其登录账号同时停用。',
         )
         return redirect('employee-list')
+
+
+@login_required
+def my_profile(request):
+    """我的档案（FR-PER-01、UC-01 的自助入口）。
+
+    为什么要另开一个入口，而不是复用档案详情页：
+    普通职工没有 sysconf.view_employee 权限（档案列表会暴露全员信息），
+    但本人档案必须能看。这里把数据源写死为 request.user，
+    连传入他人 pk 的机会都没有，从根上杜绝越权查看。
+    """
+    employee = (
+        Employee.objects
+        .select_related('department', 'position', 'salary_level')
+        .prefetch_related('certificates', 'transfer_records')
+        .get(pk=request.user.pk)
+    )
+    return render(request, 'personnel/my_profile.html', {'employee': employee})
+
+
+@login_required
+def my_password(request):
+    """修改密码（FR-SYS-03 的自助入口）。
+
+    改完密码必须调 update_session_auth_hash：Django 在用户表上存着
+    一个口令哈希派生的会话密钥，改密码会让它失效，不刷新的话用户
+    会被立刻踢回登录页——「改完密码发现自己掉线了」是最招人骂的体验。
+    """
+    if request.method == 'POST':
+        form = PasswordChangeSelfForm(request.user, request.POST)
+        if form.is_valid():
+            form.save()
+            update_session_auth_hash(request, request.user)
+            messages.success(request, '密码已修改，下次登录请使用新密码。')
+            return redirect('my-password')
+    else:
+        form = PasswordChangeSelfForm(request.user)
+
+    return render(request, 'personnel/my_password.html', {
+        'form': form,
+        'form_hint': '改完不会被登出，可以继续用当前页面；下次登录请用新密码。',
+        'cancel_url': 'home',
+        'submit_label': '修改密码',
+    })
 
 
 # =============================================================================
@@ -544,6 +590,58 @@ class LeaveListView(LoginRequiredMixin, PermissionRequiredMixin, DataScopeMixin,
         context['can_view_all'] = getattr(self.request.user, 'can_view_all', False)
         context['pending_count'] = self.scope_queryset(
             LeaveRequest.objects.filter(status=LeaveRequest.LeaveStatus.PENDING, is_deleted=False)
+        ).count()
+        return context
+
+
+class MyLeaveListView(LoginRequiredMixin, ListView):
+    """我的请假（FR-PER-03、UC-05 的自助入口）。
+
+    复用请假列表模板，但数据源固定为本人。
+    与「请假申请」的区别在于：「请假申请」按角色的数据范围过滤（HR 看全员），
+    这里不论什么角色都只看自己——所以 HR 也能用它快速查自己的假。
+    """
+
+    model = LeaveRequest
+    template_name = 'personnel/leave_list.html'
+    context_object_name = 'leaves'
+    paginate_by = 15
+
+    def get_queryset(self):
+        queryset = (
+            LeaveRequest.objects
+            .filter(employee=self.request.user, is_deleted=False)
+            .select_related('employee', 'employee__department', 'approver')
+        )
+
+        status = self.request.GET.get('status', '').strip()
+        if status:
+            queryset = queryset.filter(status=status)
+
+        leave_type = self.request.GET.get('leave_type', '').strip()
+        if leave_type:
+            queryset = queryset.filter(leave_type=leave_type)
+
+        return queryset
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['status_choices'] = LeaveRequest.LeaveStatus.choices
+        context['type_choices'] = LeaveRequest.LeaveType.choices
+        context['filters'] = {
+            'status': self.request.GET.get('status', ''),
+            'leave_type': self.request.GET.get('leave_type', ''),
+        }
+        # 固定 False：模板据此隐藏「审批」按钮。
+        # 不写死在模板里，是因为 HR 打开这一页时同样不应该看到审批按钮——
+        # 自己批自己的请假是绝不能发生的事。
+        context['can_view_all'] = False
+        context['is_self_view'] = True
+        context['page_title'] = '我的请假'
+        context['pending_count'] = LeaveRequest.objects.filter(
+            employee=self.request.user,
+            status=LeaveRequest.LeaveStatus.PENDING,
+            is_deleted=False,
         ).count()
         return context
 

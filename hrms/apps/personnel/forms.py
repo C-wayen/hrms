@@ -11,7 +11,9 @@
 """
 
 from django import forms
+from django.contrib.auth.password_validation import validate_password
 
+from apps.sysconf.forms import apply_bootstrap
 from apps.sysconf.models import Employee
 
 from .models import (
@@ -46,6 +48,57 @@ _SI_COMPANY_FIELDS = [
 ]
 
 
+class PasswordChangeSelfForm(forms.Form):
+    """自助修改密码（FR-SYS-03）。
+
+    为什么不用 Django 自带的 PasswordChangeForm：那一版要求 session 里
+    带有「已通过旧密码认证」的标记，是为「强制改密」流程设计的；
+    本系统只是普通自助改密，直接拿 request.user 校验更直接。
+    """
+
+    old_password = forms.CharField(label='当前密码', widget=forms.PasswordInput)
+    new_password1 = forms.CharField(
+        label='新密码', widget=forms.PasswordInput, help_text='至少 8 位',
+    )
+    new_password2 = forms.CharField(label='确认新密码', widget=forms.PasswordInput)
+
+    def __init__(self, user, *args, **kwargs):
+        self.user = user
+        super().__init__(*args, **kwargs)
+        apply_bootstrap(self)
+
+    def clean_old_password(self):
+        old = self.cleaned_data['old_password']
+        # 必须校验旧密码：否则任何人只要拿到别人未锁屏的会话就能改掉密码
+        if not self.user.check_password(old):
+            raise forms.ValidationError('当前密码不正确。')
+        return old
+
+    def clean(self):
+        cleaned = super().clean()
+        first = cleaned.get('new_password1')
+        second = cleaned.get('new_password2')
+
+        if first and second:
+            if first != second:
+                self.add_error('new_password2', '两次输入的新密码不一致。')
+            elif first == cleaned.get('old_password'):
+                self.add_error('new_password1', '新密码不能与当前密码相同。')
+            else:
+                # 走 Django 的密码强度校验（settings.AUTH_PASSWORD_VALIDATORS）
+                try:
+                    validate_password(first, self.user)
+                except forms.ValidationError as exc:
+                    self.add_error('new_password1', exc)
+        return cleaned
+
+    def save(self):
+        """写入新密码。注意：过期会话的失效由视图用 update_session_auth_hash 处理。"""
+        self.user.set_password(self.cleaned_data['new_password1'])
+        self.user.save(update_fields=['password'])
+        return self.user
+
+
 class EmployeeForm(forms.ModelForm):
     """职工档案新增 / 编辑表单。"""
 
@@ -70,16 +123,9 @@ class EmployeeForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # 统一为控件加上 Bootstrap 样式类：
-        # Django 默认渲染的裸 <input> 没有样式，直接放进页面很难看
-        for field in self.fields.values():
-            widget = field.widget
-            if isinstance(widget, (forms.Select, forms.SelectMultiple)):
-                widget.attrs.setdefault('class', 'form-select')
-            elif isinstance(widget, forms.CheckboxInput):
-                widget.attrs.setdefault('class', 'form-check-input')
-            else:
-                widget.attrs.setdefault('class', 'form-control')
+        # 统一为控件加上 Bootstrap 样式类：Django 默认渲染的裸 <input>
+        # 没有样式，直接放进页面很难看（与薪酬、系统设置模块共用同一实现）
+        apply_bootstrap(self)
 
     def clean(self):
         """跨字段校验：日期的先后关系，以及「离职状态」与「离职日期」是否自洽。"""

@@ -2,8 +2,8 @@
 {% load ui_tags %}
 {# 请假申请列表 —— 对应 FR-PER-03 与 UC-05 请假申请与审批 #}
 
-{% block title %}请假申请 · 人力资源管理系统{% endblock %}
-{% block page_title %}请假申请{% endblock %}
+{% block title %}{{ page_title|default:'请假申请' }} · 人力资源管理系统{% endblock %}
+{% block page_title %}{{ page_title|default:'请假申请' }}{% endblock %}
 
 {% block content %}
 <div class="card mb-3">
@@ -31,7 +31,8 @@
 
       <div class="col-md-6 d-flex gap-2 align-items-center">
         <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-search"></i> 查询</button>
-        <a href="{% url 'leave-list' %}" class="btn btn-sm btn-outline-secondary">重置</a>
+        {# 重置回当前页（不带筛选参数），这样「请假申请」与「我的请假」都能复用本模板 #}
+        <a href="{{ request.path }}" class="btn btn-sm btn-outline-secondary">重置</a>
         {% if perms.personnel.add_leaverequest %}
           <a href="{% url 'leave-create' %}" class="btn btn-sm btn-success">
             <i class="bi bi-plus-lg"></i> 提交请假
@@ -48,7 +49,11 @@
 {% if not can_view_all %}
   <div class="alert alert-secondary">
     <i class="bi bi-info-circle"></i>
-    当前以<strong>普通职工</strong>身份查看，这里只显示<strong>您本人</strong>的请假记录。
+    {% if is_self_view %}
+      这里只显示<strong>您本人</strong>的请假记录。
+    {% else %}
+      当前以<strong>普通职工</strong>身份查看，这里只显示<strong>您本人</strong>的请假记录。
+    {% endif %}
   </div>
 {% endif %}
 
